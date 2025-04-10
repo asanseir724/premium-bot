@@ -50,34 +50,34 @@
                     <div class="mb-3">
                         <label for="admin_channel" class="form-label">Admin Channel</label>
                         <input type="text" class="form-control" id="admin_channel" name="admin_channel" 
-                               value="{{ admin_channel }}" placeholder="@admin_channel">
+                               value="{{ admin_channel }}" placeholder="@admin_channel یا -100xxxxxxxxx">
                         <div class="form-text">
-                            Enter the username of the Telegram channel where admin notifications will be sent.
-                            The bot must be added as an admin to this channel.
+                            می‌توانید نام کاربری کانال (مانند @admin_channel) یا آیدی عددی کانال (مانند -100xxxxxxxxx) را وارد کنید.
+                            ربات باید به عنوان ادمین به این کانال اضافه شود.
                         </div>
                     </div>
                     
                     <div class="mb-3">
                         <label for="public_channel" class="form-label">Public Channel</label>
                         <input type="text" class="form-control" id="public_channel" name="public_channel" 
-                               value="{{ public_channel }}" placeholder="@public_channel">
+                               value="{{ public_channel }}" placeholder="@public_channel یا -100xxxxxxxxx">
                         <div class="form-text">
-                            Enter the username of the Telegram channel where successful orders will be announced publicly.
-                            The bot must be added as an admin to this channel.
+                            می‌توانید نام کاربری کانال (مانند @public_channel) یا آیدی عددی کانال (مانند -100xxxxxxxxx) را وارد کنید.
+                            ربات باید به عنوان ادمین به این کانال اضافه شود.
                         </div>
                     </div>
                     
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="notification_enabled" name="notification_enabled" 
                                {% if notification_enabled %}checked{% endif %}>
-                        <label class="form-check-label" for="notification_enabled">Enable Public Notifications</label>
+                        <label class="form-check-label" for="notification_enabled">فعال‌سازی اطلاع‌رسانی عمومی</label>
                         <div class="form-text">
-                            If enabled, successful orders will be announced in the public channel.
+                            در صورت فعال بودن، سفارش‌های موفق در کانال عمومی اعلام خواهند شد.
                         </div>
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Save Channel Settings</button>
+                        <button type="submit" class="btn btn-primary">ذخیره تنظیمات کانال</button>
                     </div>
                 </form>
             </div>
