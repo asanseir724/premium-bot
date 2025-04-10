@@ -70,8 +70,12 @@ if not BOT_TOKEN:
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Initialize NowPayments API client
-nowpayments_api = NowPayments(os.environ.get("NOWPAYMENTS_API_KEY"))
+# Initialize NowPayments API client using key from config or environment
+NOWPAYMENTS_API_KEY = config_manager.get_config_value("nowpayments_api_key") or os.environ.get("NOWPAYMENTS_API_KEY")
+logger.info("Initializing NowPayments API client")
+nowpayments_api = NowPayments(NOWPAYMENTS_API_KEY)
+if not NOWPAYMENTS_API_KEY:
+    logger.warning("No NowPayments API key provided. Payment functionality will not work.")
 
 # Database setup
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///telegram_premium.db")
@@ -575,6 +579,32 @@ def process_username_step(message, plan_id):
     
     # Create payment with NowPayments
     try:
+        # Check if NowPayments API key is set
+        if not NOWPAYMENTS_API_KEY:
+            logger.error("Cannot create payment: NowPayments API key is not set")
+            
+            # Update the order status to manual review
+            new_order.status = 'ADMIN_REVIEW'
+            db_session.commit()
+            
+            # Notify user and admin
+            bot.send_message(
+                message.chat.id,
+                "✅ Your order has been created and will be reviewed by our team.\n\n"
+                f"📝 *Order Details:*\n"
+                f"◾️ Plan: {plan['name']}\n"
+                f"◾️ Price: ${plan['price']}\n"
+                f"◾️ Username: {username}\n"
+                f"◾️ Order #: {order_id}\n\n"
+                "We'll contact you with payment instructions soon.",
+                parse_mode="Markdown"
+            )
+            
+            # Notify admins about the new order
+            notify_admins_about_order(new_order)
+            return
+        
+        logger.info(f"Creating payment for order #{order_id} - {plan['name']} - ${plan['price']}")
         payment_response = nowpayments_api.create_payment(
             price=plan['price'],
             currency='USD',
@@ -584,6 +614,8 @@ def process_username_step(message, plan_id):
         )
         
         if payment_response and 'payment_id' in payment_response:
+            logger.info(f"Payment created successfully: ID {payment_response['payment_id']}")
+            
             # Save payment information
             payment = PaymentTransaction(
                 payment_id=payment_response['payment_id'],
@@ -619,8 +651,10 @@ def process_username_step(message, plan_id):
             )
             
             markup = types.InlineKeyboardMarkup()
-            confirm_button = types.InlineKeyboardButton("💰 Payment Confirmed", callback_data="payment_confirmed")
+            confirm_button = types.InlineKeyboardButton("💰 Payment Confirmed", callback_data=f"payment_confirmed:{order_id}")
+            help_button = types.InlineKeyboardButton("🆘 Help with Payment", callback_data="payment_help")
             markup.add(confirm_button)
+            markup.add(help_button)
             
             bot.send_message(
                 message.chat.id,
@@ -629,25 +663,60 @@ def process_username_step(message, plan_id):
                 reply_markup=markup
             )
         else:
-            # Handle payment creation error
+            # Handle payment creation error - switch to manual mode
+            logger.warning(f"Payment response error: {payment_response}")
+            
+            # Update the order status to admin review
+            new_order.status = 'ADMIN_REVIEW'
+            db_session.commit()
+            
+            # Notify admins about the new order
+            notify_admins_about_order(new_order)
+            
+            # Notify user
+            bot.send_message(
+                message.chat.id,
+                "⚠️ Automatic payment creation is currently unavailable.\n\n"
+                f"Your order #{order_id} has been created and will be processed manually by our team.\n"
+                "We'll contact you shortly with payment instructions.",
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        logger.error(f"Error creating payment: {e}")
+        logger.exception(e)
+        
+        # Don't delete the order, but change status for admin review
+        if new_order:
+            try:
+                new_order.status = 'ADMIN_REVIEW'
+                new_order.admin_notes = f"Payment creation error: {str(e)}"
+                db_session.commit()
+                
+                # Notify admins about the problematic order
+                notify_admins_about_order(new_order)
+                
+                # Notify user
+                bot.send_message(
+                    message.chat.id,
+                    "⚠️ We encountered an issue with the payment processor.\n\n"
+                    f"Your order #{order_id} has been created and will be processed manually by our team.\n"
+                    "We'll contact you shortly with payment instructions.",
+                    parse_mode="Markdown"
+                )
+            except Exception as inner_e:
+                logger.error(f"Error updating order after payment failure: {inner_e}")
+                db_session.rollback()
+                
+                # Last resort - simple error message
+                bot.send_message(
+                    message.chat.id,
+                    "❌ Error creating payment. Please try again later or contact support."
+                )
+        else:
             bot.send_message(
                 message.chat.id,
                 "❌ Error creating payment. Please try again later or contact support."
             )
-            
-            # Delete the order
-            db_session.delete(new_order)
-            db_session.commit()
-    except Exception as e:
-        logger.error(f"Error creating payment: {e}")
-        bot.send_message(
-            message.chat.id,
-            "❌ Error creating payment. Please try again later or contact support."
-        )
-        
-        # Delete the order
-        db_session.delete(new_order)
-        db_session.commit()
 
 def process_activation_link(message, order_id):
     user_id = message.from_user.id
