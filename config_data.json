@@ -4,21 +4,21 @@
             "id": "plan_3month",
             "name": "3-Month Premium",
             "description": "Access Premium features for 3 months",
-            "price": 10.99,
+            "price": 12.99,
             "currency": "USD"
         },
         {
             "id": "plan_6month",
             "name": "6-Month Premium",
             "description": "Access Premium features for 6 months",
-            "price": 19.99,
+            "price": 16.99,
             "currency": "USD"
         },
         {
             "id": "plan_1year",
             "name": "1-Year Premium",
             "description": "Access Premium features for 1 year",
-            "price": 34.99,
+            "price": 29.99,
             "currency": "USD"
         }
     ],
