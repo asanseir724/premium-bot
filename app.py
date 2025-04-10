@@ -115,15 +115,15 @@ def logout():
 @login_required
 def admin_dashboard():
     # Count orders by status
-    pending_count = Order.query.filter_by(status='ADMIN_REVIEW').count()
-    completed_count = Order.query.filter_by(status='COMPLETED').count()
-    cancelled_count = Order.query.filter_by(status='CANCELLED').count()
+    pending_count = Order.query.filter(Order.status.in_(['PENDING', 'ADMIN_REVIEW', 'AWAITING_PAYMENT'])).count()
+    completed_count = Order.query.filter(Order.status == 'APPROVED').count()
+    cancelled_count = Order.query.filter(Order.status == 'REJECTED').count()
     
     # Recent orders
     recent_orders = Order.query.order_by(Order.created_at.desc()).limit(5).all()
     
     # Count payments
-    successful_payments = PaymentTransaction.query.filter_by(status='COMPLETED').count()
+    successful_payments = Order.query.filter(Order.status == 'APPROVED').count()
     
     return render_template('admin/dashboard.html', 
                            pending_count=pending_count,
@@ -458,6 +458,57 @@ def admin_update_support():
         flash('Support contact is required', 'danger')
     
     return redirect(url_for('admin_support'))
+
+@app.route('/admin/broadcasts')
+@login_required
+def admin_broadcasts():
+    # Get all broadcast messages ordered by most recent first
+    messages = BroadcastMessage.query.order_by(BroadcastMessage.created_at.desc()).all()
+    
+    # Count total registered users
+    total_users = User.query.count()
+    
+    return render_template('admin/broadcasts.html', 
+                          messages=messages, 
+                          total_users=total_users)
+
+@app.route('/admin/broadcasts/send', methods=['POST'])
+@login_required
+def admin_send_broadcast():
+    message_text = request.form.get('message_text')
+    
+    if not message_text:
+        flash('Message text is required', 'danger')
+        return redirect(url_for('admin_broadcasts'))
+    
+    # Create a new broadcast message
+    broadcast = BroadcastMessage(
+        admin_id=current_user.id,
+        message_text=message_text,
+        status='PENDING'
+    )
+    
+    db.session.add(broadcast)
+    db.session.commit()
+    
+    try:
+        # Import the function from run_telegram_bot.py to send the broadcast
+        from run_telegram_bot import send_broadcast_message
+        
+        # Start sending the broadcast in a background thread
+        flash(f'Broadcast message #{broadcast.id} has been queued for sending', 'success')
+        
+        # Start sending in background
+        threading.Thread(
+            target=send_broadcast_message,
+            args=(broadcast.id,),
+            daemon=True
+        ).start()
+    except Exception as e:
+        logger.error(f"Error sending broadcast: {str(e)}")
+        flash(f'Error initiating broadcast: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_broadcasts'))
 
 @app.route('/admin/orders/<order_id>/process_manual', methods=['POST'])
 @login_required

@@ -68,5 +68,22 @@ class AdminUser(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Relationship to broadcast messages
+    broadcast_messages = db.relationship('BroadcastMessage', backref='admin', lazy=True)
+    
     def __repr__(self):
         return f'<AdminUser {self.username}>'
+
+class BroadcastMessage(db.Model):
+    """Model representing a broadcast message sent to all users"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=False)
+    message_text = db.Column(db.Text, nullable=False)
+    sent_count = db.Column(db.Integer, default=0)
+    failed_count = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='PENDING')  # PENDING, SENDING, COMPLETED, FAILED
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    def __repr__(self):
+        return f'<BroadcastMessage id={self.id} status={self.status}>'
