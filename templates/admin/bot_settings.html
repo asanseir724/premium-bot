@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Bot Settings - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_bot_settings') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="settings"></i> Bot Settings
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Bot Settings</h2>
+        
+        <div class="card dash-card">
+            <div class="card-header">
+                <h5 class="mb-0">Telegram Bot Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Configure the Telegram bot settings for the premium subscription bot.
+                </p>
+                
+                <form method="POST" action="{{ url_for('admin_update_bot_settings') }}">
+                    <div class="mb-3">
+                        <label for="bot_token" class="form-label">Bot Token</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="bot_token" name="bot_token" 
+                                   value="{{ bot_token }}" placeholder="123456789:ABCDefGhIJKlmnOPQRsTUVwxyZ">
+                            <button class="btn btn-outline-primary" type="button" id="toggleToken">
+                                <i data-feather="eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Enter the Telegram Bot Token obtained from <a href="https://t.me/BotFather" target="_blank">@BotFather</a>.
+                            This is required for the bot to function.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nowpayments_api_key" class="form-label">NowPayments API Key <span class="text-muted">(Optional)</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="nowpayments_api_key" name="nowpayments_api_key" 
+                                   value="{{ nowpayments_api_key }}" placeholder="API key for payment processing">
+                            <button class="btn btn-outline-primary" type="button" id="toggleAPIKey">
+                                <i data-feather="eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Enter your NowPayments API key for processing cryptocurrency payments.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="bot_enabled" name="bot_enabled" 
+                               {% if bot_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="bot_enabled">Enable Bot</label>
+                        <div class="form-text">
+                            When enabled, the bot will be active and respond to messages.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Save Bot Settings</button>
+                    </div>
+                </form>
+                
+                {% if bot_token %}
+                <div class="mt-4">
+                    <h6>Bot Status and Control</h6>
+                    <div class="d-flex gap-2 mt-3">
+                        <form method="POST" action="{{ url_for('admin_start_bot') }}" class="d-inline">
+                            <button type="submit" class="btn btn-success">
+                                <i data-feather="play"></i> Start Bot
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin_stop_bot') }}" class="d-inline">
+                            <button type="submit" class="btn btn-danger">
+                                <i data-feather="square"></i> Stop Bot
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin_set_webhook') }}" class="d-inline">
+                            <button type="submit" class="btn btn-info">
+                                <i data-feather="link"></i> Set Webhook
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="info"></i> 
+                        <strong>Note:</strong> To use the bot in webhook mode, make sure your server is accessible via HTTPS and the webhook URL is configured correctly. For local development or testing, use the polling mode.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle visibility for Bot Token
+        const toggleToken = document.getElementById('toggleToken');
+        const botToken = document.getElementById('bot_token');
+        if (toggleToken && botToken) {
+            toggleToken.addEventListener('click', function() {
+                const type = botToken.getAttribute('type');
+                botToken.setAttribute('type', type === 'password' ? 'text' : 'password');
+                this.innerHTML = type === 'password' ? '<i data-feather="eye-off"></i>' : '<i data-feather="eye"></i>';
+                feather.replace();
+            });
+            // Set initial type to password
+            botToken.setAttribute('type', 'password');
+        }
+        
+        // Toggle visibility for API Key
+        const toggleAPIKey = document.getElementById('toggleAPIKey');
+        const apiKey = document.getElementById('nowpayments_api_key');
+        if (toggleAPIKey && apiKey) {
+            toggleAPIKey.addEventListener('click', function() {
+                const type = apiKey.getAttribute('type');
+                apiKey.setAttribute('type', type === 'password' ? 'text' : 'password');
+                this.innerHTML = type === 'password' ? '<i data-feather="eye-off"></i>' : '<i data-feather="eye"></i>';
+                feather.replace();
+            });
+            // Set initial type to password
+            apiKey.setAttribute('type', 'password');
+        }
+    });
+</script>
+{% endblock %}

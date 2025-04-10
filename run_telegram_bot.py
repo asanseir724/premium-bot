@@ -19,10 +19,10 @@ import config_manager
 from nowpayments import NowPayments
 from models import User, Order, PaymentTransaction
 
-# Initialize bot with token from environment variable
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+# Initialize bot with token from config or environment variable
+BOT_TOKEN = config_manager.get_config_value("bot_token") or os.environ.get("TELEGRAM_BOT_TOKEN")
 if not BOT_TOKEN:
-    logger.error("No bot token provided. Set the TELEGRAM_BOT_TOKEN environment variable.")
+    logger.error("No bot token provided. Set the TELEGRAM_BOT_TOKEN environment variable or configure it in admin panel.")
     exit(1)
 
 bot = telebot.TeleBot(BOT_TOKEN)

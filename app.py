@@ -416,6 +416,94 @@ def admin_update_support():
     
     return redirect(url_for('admin_support'))
 
+@app.route('/admin/bot_settings')
+@login_required
+def admin_bot_settings():
+    # Get current bot token and other settings
+    bot_token = config_manager.get_config_value('bot_token', '')
+    nowpayments_api_key = config_manager.get_config_value('nowpayments_api_key', '')
+    bot_enabled = config_manager.get_config_value('bot_enabled', False)
+    
+    return render_template('admin/bot_settings.html', 
+                           bot_token=bot_token, 
+                           nowpayments_api_key=nowpayments_api_key,
+                           bot_enabled=bot_enabled)
+
+@app.route('/admin/bot_settings/update', methods=['POST'])
+@login_required
+def admin_update_bot_settings():
+    bot_token = request.form.get('bot_token', '')
+    nowpayments_api_key = request.form.get('nowpayments_api_key', '')
+    bot_enabled = 'bot_enabled' in request.form
+    
+    # Save settings to config
+    config_manager.set_config_value('bot_token', bot_token)
+    config_manager.set_config_value('nowpayments_api_key', nowpayments_api_key)
+    config_manager.set_config_value('bot_enabled', bot_enabled)
+    
+    flash('Bot settings have been updated', 'success')
+    return redirect(url_for('admin_bot_settings'))
+
+@app.route('/admin/bot_settings/start', methods=['POST'])
+@login_required
+def admin_start_bot():
+    # Logic to start the bot (this is just a placeholder)
+    # In a real application, you would need a mechanism to restart the bot process
+    try:
+        # Set bot as enabled
+        config_manager.set_config_value('bot_enabled', True)
+        
+        # This is a placeholder. In a real app, you'd need a way to communicate with the bot process
+        # For example, you might use a message queue or a direct API call
+        
+        flash('Bot has been started', 'success')
+    except Exception as e:
+        flash(f'Failed to start bot: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_bot_settings'))
+
+@app.route('/admin/bot_settings/stop', methods=['POST'])
+@login_required
+def admin_stop_bot():
+    # Logic to stop the bot (this is just a placeholder)
+    try:
+        # Set bot as disabled
+        config_manager.set_config_value('bot_enabled', False)
+        
+        # This is a placeholder. In a real app, you'd need a way to communicate with the bot process
+        
+        flash('Bot has been stopped', 'success')
+    except Exception as e:
+        flash(f'Failed to stop bot: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_bot_settings'))
+
+@app.route('/admin/bot_settings/set_webhook', methods=['POST'])
+@login_required
+def admin_set_webhook():
+    # Logic to set webhook for the bot
+    try:
+        bot_token = config_manager.get_config_value('bot_token', '')
+        if not bot_token:
+            flash('Bot token is required to set webhook', 'danger')
+            return redirect(url_for('admin_bot_settings'))
+        
+        webhook_url = request.host_url.rstrip('/') + url_for('telegram_webhook')
+        
+        # This is a placeholder. In a real app, you'd make an API call to Telegram
+        # For example: https://api.telegram.org/bot<token>/setWebhook?url=<webhook_url>
+        import requests
+        response = requests.get(f'https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}')
+        
+        if response.status_code == 200 and response.json().get('ok'):
+            flash('Webhook has been set successfully', 'success')
+        else:
+            flash(f'Failed to set webhook: {response.json().get("description", "Unknown error")}', 'danger')
+    except Exception as e:
+        flash(f'Failed to set webhook: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_bot_settings'))
+
 @app.route('/webhook/telestars24bot', methods=['POST'])
 def telegram_webhook():
     """Endpoint for Telegram webhook, to be used with setWebhook"""
