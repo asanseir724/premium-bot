@@ -1,0 +1,46 @@
+name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install flask flask-login flask-sqlalchemy psycopg2-binary pytelegrambotapi sqlalchemy requests telebot trafilatura gunicorn alembic email-validator werkzeug python-dotenv; fi
+        
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        
+    - name: Test
+      run: |
+        python -m unittest discover -s tests
+        
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy
+        cp -r *.py templates static migrations config*.* .env.example Dockerfile install.sh deploy/
+        cd deploy && zip -r ../deploy.zip *
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: deploy-package
+        path: deploy.zip

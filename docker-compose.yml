@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://telegrambot:telegrambot@db:5432/telegrambot
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      - POSTGRES_USER=telegrambot
+      - POSTGRES_PASSWORD=telegrambot
+      - POSTGRES_DB=telegrambot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  bot:
+    build: .
+    restart: always
+    command: python start_bot.py
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - web
+    environment:
+      - DATABASE_URL=postgresql://telegrambot:telegrambot@db:5432/telegrambot
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  postgres_data:
