@@ -451,6 +451,81 @@ def admin_update_support():
     
     return redirect(url_for('admin_support'))
 
+@app.route('/admin/orders/<order_id>/process_manual', methods=['POST'])
+@login_required
+def admin_process_manual_order(order_id):
+    """Process an order manually after credit has been added to supplier account"""
+    try:
+        order = Order.query.filter_by(order_id=order_id).first_or_404()
+        
+        # Ensure order is in the right state
+        if order.status != 'AWAITING_CREDIT':
+            flash(f'Order cannot be processed: current status is {order.status}', 'danger')
+            return redirect(url_for('admin_order_detail', order_id=order_id))
+            
+        # Check if admin confirmed credit
+        credit_confirmed = 'credit_confirmed' in request.form
+        if not credit_confirmed:
+            flash('You must confirm that credit has been added to supplier account', 'danger')
+            return redirect(url_for('admin_order_detail', order_id=order_id))
+            
+        # Update the order status
+        order.status = 'SUPPLIER_PROCESSING'
+        order.updated_at = datetime.utcnow()
+        order.admin_notes = (order.admin_notes or '') + "\n" + f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] Order sent to supplier for processing."
+        db.session.commit()
+        
+        # Here you would make the actual API call to your supplier
+        # This is where you'd integrate with the supplier's API
+        
+        flash(f'Order {order_id} has been sent to supplier for processing', 'success')
+        return redirect(url_for('admin_order_detail', order_id=order_id))
+    except Exception as e:
+        logger.error(f"Error processing manual order: {str(e)}")
+        logger.exception(e)
+        flash(f'Error processing order: {str(e)}', 'danger')
+        return redirect(url_for('admin_order_detail', order_id=order_id))
+
+@app.route('/admin/orders/<order_id>/confirm_supplier', methods=['POST'])
+@login_required
+def admin_confirm_supplier_complete(order_id):
+    """Confirm that the supplier has completed the order"""
+    try:
+        order = Order.query.filter_by(order_id=order_id).first_or_404()
+        
+        # Ensure order is in the right state
+        if order.status != 'SUPPLIER_PROCESSING':
+            flash(f'Order cannot be confirmed: current status is {order.status}', 'danger')
+            return redirect(url_for('admin_order_detail', order_id=order_id))
+            
+        # Get activation link
+        activation_link = request.form.get('activation_link', '')
+        if not activation_link:
+            flash('Activation link is required', 'danger')
+            return redirect(url_for('admin_order_detail', order_id=order_id))
+        
+        # Update order status
+        order.status = 'APPROVED'
+        order.updated_at = datetime.utcnow()
+        order.activation_link = activation_link
+        order.admin_notes = (order.admin_notes or '') + "\n" + f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] Order confirmed as completed by supplier."
+        db.session.commit()
+        
+        # Send notification to customer via Telegram
+        try:
+            from run_telegram_bot import notify_customer_about_approval
+            notify_customer_about_approval(order)
+        except Exception as notify_err:
+            logger.error(f"Error notifying customer: {str(notify_err)}")
+            
+        flash(f'Order {order_id} has been marked as completed and customer has been notified', 'success')
+        return redirect(url_for('admin_order_detail', order_id=order_id))
+    except Exception as e:
+        logger.error(f"Error confirming supplier completion: {str(e)}")
+        logger.exception(e)
+        flash(f'Error confirming completion: {str(e)}', 'danger')
+        return redirect(url_for('admin_order_detail', order_id=order_id))
+
 @app.route('/admin/bot_settings')
 @login_required
 def admin_bot_settings():
@@ -458,11 +533,13 @@ def admin_bot_settings():
     bot_token = config_manager.get_config_value('bot_token', '')
     nowpayments_api_key = config_manager.get_config_value('nowpayments_api_key', '')
     bot_enabled = config_manager.get_config_value('bot_enabled', False)
+    has_sufficient_credit = config_manager.get_config_value('has_sufficient_credit', False)
     
     return render_template('admin/bot_settings.html', 
                            bot_token=bot_token, 
                            nowpayments_api_key=nowpayments_api_key,
-                           bot_enabled=bot_enabled)
+                           bot_enabled=bot_enabled,
+                           has_sufficient_credit=has_sufficient_credit)
 
 @app.route('/admin/bot_settings/update', methods=['POST'])
 @login_required

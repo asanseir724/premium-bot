@@ -115,42 +115,77 @@ def create_premium_order():
         # Set the preferred cryptocurrency (default to TRX)
         crypto_currency = data.get('crypto_currency', 'TRX')
         
+        # Check if we should use automated or manual process
+        # We'll first check if the credit is sufficient with the supplier
         try:
-            payment_result = payment_client.create_payment(
-                price=plan['price'],
-                currency='USD',
-                pay_currency=crypto_currency,
-                order_id=order_id,
-                order_description=f"Telegram Premium: {plan['name']} for {telegram_username}"
-            )
+            # First, create the order in pending state
+            order.status = 'PENDING'
+            db.session.commit()
             
-            if 'payment_id' in payment_result and 'pay_address' in payment_result:
-                # Update order with payment details
-                order.payment_id = payment_result['payment_id']
-                order.payment_url = payment_result.get('invoice_url', '')
-                order.status = 'AWAITING_PAYMENT'
+            # Check supplier credit status (this would be an API call to your supplier)
+            # For now, we'll use a simplified approach
+            # In a real implementation, you'd call the supplier's API to check credit
+            
+            # Flag to determine if we have sufficient credit with supplier
+            # For this demo, we'll use a config value that can be toggled in admin panel
+            has_sufficient_credit = config_manager.get_config_value('has_sufficient_credit', False)
+            
+            if has_sufficient_credit:
+                # If we have sufficient credit, proceed with automated order
+                payment_result = payment_client.create_payment(
+                    price=plan['price'],
+                    currency='USD',
+                    pay_currency=crypto_currency,
+                    order_id=order_id,
+                    order_description=f"Telegram Premium: {plan['name']} for {telegram_username}"
+                )
+                
+                if 'payment_id' in payment_result and 'pay_address' in payment_result:
+                    # Update order with payment details
+                    order.payment_id = payment_result['payment_id']
+                    order.payment_url = payment_result.get('invoice_url', '')
+                    order.status = 'AWAITING_PAYMENT'
+                    db.session.commit()
+                    
+                    # Prepare the response
+                    response = {
+                        'success': True,
+                        'order_id': order.order_id,
+                        'plan_name': plan['name'],
+                        'amount': plan['price'],
+                        'currency': 'USD',
+                        'crypto_amount': payment_result.get('pay_amount', 0),
+                        'crypto_currency': crypto_currency,
+                        'payment_address': payment_result.get('pay_address', ''),
+                        'payment_id': payment_result['payment_id'],
+                        'status': 'AWAITING_PAYMENT',
+                        'created_at': order.created_at.isoformat()
+                    }
+                    
+                    return jsonify(response), 201
+                else:
+                    order.status = 'ERROR'
+                    db.session.commit()
+                    return jsonify({'error': 'Failed to create payment', 'details': payment_result}), 500
+            else:
+                # If we don't have sufficient credit, mark for manual processing
+                order.status = 'AWAITING_CREDIT'
+                order.admin_notes = "Awaiting admin to increase supplier credit and process manually."
                 db.session.commit()
                 
-                # Prepare the response
+                # Still return a success response but with different status
                 response = {
                     'success': True,
                     'order_id': order.order_id,
                     'plan_name': plan['name'],
                     'amount': plan['price'],
                     'currency': 'USD',
-                    'crypto_amount': payment_result.get('pay_amount', 0),
-                    'crypto_currency': crypto_currency,
-                    'payment_address': payment_result.get('pay_address', ''),
-                    'payment_id': payment_result['payment_id'],
-                    'status': 'AWAITING_PAYMENT',
+                    'status': 'AWAITING_CREDIT',
+                    'message': 'Order received but awaiting manual processing due to supplier credit check.',
                     'created_at': order.created_at.isoformat()
                 }
                 
                 return jsonify(response), 201
-            else:
-                order.status = 'ERROR'
-                db.session.commit()
-                return jsonify({'error': 'Failed to create payment', 'details': payment_result}), 500
                 
         except Exception as e:
             logger.error(f"Payment creation error: {str(e)}")

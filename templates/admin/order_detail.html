@@ -232,6 +232,48 @@
                                     <i data-feather="x"></i> Reject Order
                                 </button>
                             {% endif %}
+                            
+                            {% if order.status == 'AWAITING_CREDIT' %}
+                                <div class="alert alert-warning">
+                                    <i data-feather="alert-triangle"></i> This order is awaiting credit with supplier.
+                                </div>
+                                
+                                <form id="processManualOrderForm" method="POST" action="{{ url_for('admin_process_manual_order', order_id=order.order_id) }}">
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="creditConfirmed" name="credit_confirmed" required>
+                                            <label class="form-check-label" for="creditConfirmed">
+                                                I confirm credit has been added to supplier account
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                                        <i data-feather="send"></i> Process Order with Supplier
+                                    </button>
+                                </form>
+                                
+                                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                    <i data-feather="x"></i> Cancel Order
+                                </button>
+                            {% endif %}
+                            
+                            {% if order.status == 'SUPPLIER_PROCESSING' %}
+                                <div class="alert alert-info">
+                                    <i data-feather="clock"></i> Order is being processed by supplier.
+                                </div>
+                                
+                                <form id="confirmSupplierComplete" method="POST" action="{{ url_for('admin_confirm_supplier_complete', order_id=order.order_id) }}">
+                                    <div class="mb-3">
+                                        <label for="activationLink" class="form-label">Activation Link from Supplier</label>
+                                        <input type="text" class="form-control" id="activationLink" name="activation_link" 
+                                               placeholder="https://t.me/premium/..." required>
+                                        <div class="form-text">Enter the Telegram Premium activation link received from supplier</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100 mb-2">
+                                        <i data-feather="check"></i> Confirm Supplier Completed
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
