@@ -1296,6 +1296,89 @@ def notify_customer_about_payment(order, transaction):
     except Exception as e:
         logger.error(f"Error notifying customer about payment: {e}")
         
+def notify_customer_about_approval(order):
+    """Notify customer about their approved order with activation link"""
+    try:
+        # Find the user
+        customer = db_session.query(User).get(order.user_id)
+        if not customer:
+            logger.error(f"Customer not found for order {order.order_id}")
+            return False
+            
+        # Check if we have activation link
+        if not order.activation_link:
+            logger.error(f"No activation link available for order {order.order_id}")
+            return False
+            
+        # HTML formatted notification
+        customer_notification = (
+            f"🎉 <b>Your Premium Subscription is Ready!</b>\n\n"
+            f"Your order for <b>{order.plan_name}</b> has been approved and processed.\n\n"
+            f"<b>Order Details:</b>\n"
+            f"◾️ Order #: {order.order_id}\n"
+            f"◾️ Username: {order.telegram_username}\n"
+            f"◾️ Status: Approved\n\n"
+            f"<b>Your Activation Link:</b>\n"
+            f"{order.activation_link}\n\n"
+            f"Click the link above to activate your Telegram Premium subscription.\n\n"
+            f"Thank you for your purchase! If you have any questions, contact our support."
+        )
+        
+        # Create notification with activation link
+        markup = types.InlineKeyboardMarkup()
+        activate_button = types.InlineKeyboardButton("🚀 Activate Premium", url=order.activation_link)
+        support_button = types.InlineKeyboardButton("🆘 Need Help?", callback_data="support")
+        markup.add(activate_button)
+        markup.add(support_button)
+        
+        bot.send_message(
+            customer.telegram_id,
+            customer_notification,
+            parse_mode="HTML",
+            reply_markup=markup
+        )
+        logger.info(f"Approval notification sent to user {customer.telegram_id} for order #{order.order_id}")
+        
+        # Also send to the public channel if configured
+        public_channel = config_manager.get_public_channel()
+        if public_channel:
+            try:
+                # For public announcement, we don't include the activation link
+                public_message = (
+                    f"🎉 <b>NEW PREMIUM ACTIVATION!</b> 🎉\n\n"
+                    f"A user just received their <b>{order.plan_name}</b> subscription!\n\n"
+                    f"🔥 <b>TELEGRAM PREMIUM GIVES YOU:</b>\n"
+                    f"✓ Upload files up to 4GB\n"
+                    f"✓ Exclusive stickers and reactions\n"
+                    f"✓ Ad-free experience\n" 
+                    f"✓ Premium badge\n"
+                    f"✓ Voice-to-text conversion\n"
+                    f"✓ And much more!\n\n"
+                    f"💯 <b>Don't miss out!</b> Get yours today!"
+                )
+                
+                # Create eye-catching inline keyboard
+                markup = types.InlineKeyboardMarkup(row_width=2)
+                order_button = types.InlineKeyboardButton("💎 Get Premium", url=f"https://t.me/{bot.get_me().username}?start=premium")
+                price_button = types.InlineKeyboardButton("💰 View Plans", url=f"https://t.me/{bot.get_me().username}?start=plans")
+                markup.add(order_button, price_button)
+                
+                bot.send_message(
+                    public_channel, 
+                    public_message, 
+                    parse_mode="HTML",
+                    reply_markup=markup
+                )
+                logger.info(f"Activation announcement sent to public channel: {public_channel}")
+            except Exception as channel_err:
+                logger.error(f"Failed to send public channel announcement: {str(channel_err)}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Failed to notify customer about approval: {str(e)}")
+        logger.exception(e)
+        return False
+        
 def send_public_purchase_announcement(order, transaction):
     """Send purchase announcement to public channel"""
     public_channel = config_manager.get_public_channel()
