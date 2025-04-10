@@ -1101,15 +1101,20 @@ def notify_admins_about_order(order):
             logger.info(f"Notification sent to admin channel: {admin_channel}")
             
             # Also send a notification to the public channel if configured and enabled
-            if public_channel and public_channel != admin_channel:
+            # We're allowing sending to the same channel with a different message
+            if public_channel:
                 try:
-                    # Create a simpler notification for public channel
+                    # Different message format for public channel announcements
                     public_notification = (
                         f"🔔 <b>New Order Received!</b>\n\n"
                         f"Plan: <b>{order.plan_name}</b>\n"
                         f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
                         f"Order is being processed by our team."
                     )
+                    
+                    # Check if we're sending to the same channel
+                    if public_channel == admin_channel:
+                        logger.info(f"Public channel is same as admin channel: {public_channel}")
                     
                     bot.send_message(
                         public_channel, 
@@ -1272,10 +1277,16 @@ def notify_customer_about_payment(order, transaction):
 def send_public_purchase_announcement(order, transaction):
     """Send purchase announcement to public channel"""
     public_channel = config_manager.get_public_channel()
+    admin_channel = config_manager.get_admin_channel()
     notification_enabled = config_manager.get_config_value("notification_enabled", False)
     
     if not public_channel or not notification_enabled:
+        logger.warning("Public channel not configured or notifications disabled")
         return
+        
+    # Check if we're sending to the same channel
+    if public_channel == admin_channel:
+        logger.info(f"Public channel is same as admin channel: {public_channel}, still sending announcement")
         
     try:
         # Format amount with 2 decimal places
