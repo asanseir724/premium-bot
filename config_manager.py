@@ -14,7 +14,9 @@ DEFAULT_CONFIG = {
     "bot_admins": BOT_ADMINS,
     "support_contact": SUPPORT_CONTACT,
     "admin_channel": ADMIN_CHANNEL,
-    "public_channel": PUBLIC_CHANNEL
+    "public_channel": PUBLIC_CHANNEL,
+    "required_channel": "",  # Channel that users must join to use the bot
+    "channel_subscription_required": False  # Whether subscription is required
 }
 
 # In-memory configuration
@@ -190,6 +192,38 @@ def set_public_channel(channel_id):
     _config["public_channel"] = channel_id
     _save_config()
     logger.info(f"Updated public channel: {channel_id}")
+    return True
+
+def get_required_channel():
+    """Get the required subscription channel"""
+    if _config is None:
+        _load_config()
+    return _config.get("required_channel", "")
+    
+def set_required_channel(channel_id):
+    """Set the required subscription channel"""
+    if _config is None:
+        _load_config()
+        
+    _config["required_channel"] = channel_id
+    _save_config()
+    logger.info(f"Updated required channel: {channel_id}")
+    return True
+    
+def is_channel_subscription_required():
+    """Check if channel subscription is required"""
+    if _config is None:
+        _load_config()
+    return _config.get("channel_subscription_required", False)
+    
+def set_channel_subscription_required(required):
+    """Set whether channel subscription is required"""
+    if _config is None:
+        _load_config()
+        
+    _config["channel_subscription_required"] = required
+    _save_config()
+    logger.info(f"Updated channel subscription requirement: {required}")
     return True
 
 def get_config_value(key, default=None):

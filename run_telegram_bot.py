@@ -121,16 +121,43 @@ def is_admin(user_id):
     admin_ids = config_manager.get_bot_admins()
     return str(user_id) in admin_ids
 
+def check_channel_subscription(user_id):
+    """
+    Check if user is subscribed to required channel
+    Returns True if:
+    - Subscription is not required
+    - Required channel is not set
+    - User is subscribed to the required channel
+    Returns False if user is not subscribed
+    """
+    # If subscription is not required or channel is not set, return True
+    if not config_manager.is_channel_subscription_required():
+        return True
+        
+    required_channel = config_manager.get_required_channel()
+    if not required_channel:
+        return True
+    
+    try:
+        # Check user's membership in the channel
+        chat_member = bot.get_chat_member(required_channel, user_id)
+        
+        # Check if user is a member, creator, or administrator of the channel
+        return chat_member.status in ['member', 'creator', 'administrator']
+    except Exception as e:
+        logger.error(f"Error checking channel subscription: {str(e)}")
+        # If there's an error (e.g., bot is not in the channel), don't block the user
+        return True
+
 def create_main_menu():
     """Create the main menu markup"""
     markup = types.InlineKeyboardMarkup(row_width=1)
     
     plans_button = types.InlineKeyboardButton("📱 Subscription Plans", callback_data="show_plans")
     my_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
-    help_button = types.InlineKeyboardButton("❓ Help", callback_data="help")
     support_button = types.InlineKeyboardButton("🆘 Support", callback_data="support")
     
-    markup.add(plans_button, my_orders_button, help_button, support_button)
+    markup.add(plans_button, my_orders_button, support_button)
     
     return markup
 
@@ -403,8 +430,9 @@ def handle_callback_query(call):
             reply_markup=create_main_menu()
         )
     
-    elif call.data == "help":
-        handle_help(call.message)
+    # Help feature removed
+    # elif call.data == "help":
+    #     handle_help(call.message)
         
     elif call.data == "support":
         handle_support(call.message)
