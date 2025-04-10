@@ -1106,20 +1106,42 @@ def notify_admins_about_order(order):
                 try:
                     # Different message format for public channel announcements
                     public_notification = (
-                        f"🔔 <b>New Order Received!</b>\n\n"
-                        f"Plan: <b>{order.plan_name}</b>\n"
-                        f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
-                        f"Order is being processed by our team."
+                        f"🌟 <b>NEW ORDER RECEIVED!</b> 🌟\n\n"
+                        f"A customer just ordered: <b>{order.plan_name}</b> ✨\n\n"
+                        f"🔥 <b>TELEGRAM PREMIUM BENEFITS:</b>\n"
+                        f"✓ Higher upload limits (4GB files)\n"
+                        f"✓ Exclusive stickers and reactions\n"
+                        f"✓ Ad-free experience\n" 
+                        f"✓ Premium profile badge\n"
+                        f"✓ Voice-to-text conversion\n"
+                        f"✓ And much more...\n\n"
+                        f"💯 <b>Don't miss out!</b> Get your Premium today!"
                     )
                     
                     # Check if we're sending to the same channel
                     if public_channel == admin_channel:
                         logger.info(f"Public channel is same as admin channel: {public_channel}")
                     
+                    # Create attractive inline keyboard with multiple buttons
+                    markup = types.InlineKeyboardMarkup(row_width=2)
+                    
+                    # Main buttons
+                    order_button = types.InlineKeyboardButton("💎 Get Premium Now", url=f"https://t.me/{bot.get_me().username}?start=premium")
+                    price_button = types.InlineKeyboardButton("💰 View Plans & Pricing", url=f"https://t.me/{bot.get_me().username}?start=plans")
+                    
+                    # Information buttons
+                    features_button = types.InlineKeyboardButton("✨ Premium Features", url=f"https://t.me/{bot.get_me().username}?start=features")
+                    support_button = types.InlineKeyboardButton("🆘 Get Help", url=f"https://t.me/{bot.get_me().username}?start=support")
+                    
+                    # Add buttons in two rows
+                    markup.add(order_button, price_button)
+                    markup.add(features_button, support_button)
+                    
                     bot.send_message(
                         public_channel, 
                         public_notification, 
-                        parse_mode="HTML"
+                        parse_mode="HTML",
+                        reply_markup=markup
                     )
                     logger.info(f"Notification sent to public channel: {public_channel}")
                 except Exception as e:
