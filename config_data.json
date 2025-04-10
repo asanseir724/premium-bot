@@ -31,5 +31,7 @@
     "bot_enabled": true,
     "admin_channel": "-1002549640925",
     "public_channel": "-1002549640925",
-    "notification_enabled": true
+    "notification_enabled": true,
+    "required_channel": "@kjgjhfhfgfjkjkl",
+    "channel_subscription_required": true
 }
