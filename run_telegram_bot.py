@@ -854,10 +854,20 @@ def handle_callback_query(call):
                 "⌛️ This process usually takes 1-24 hours. Please be patient."
             )
             
+            # Add navigation buttons after payment confirmation
+            markup = types.InlineKeyboardMarkup()
+            view_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+            plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+            main_menu_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
+            markup.add(view_orders_button)
+            markup.add(plans_button)
+            markup.add(main_menu_button)
+            
             bot.edit_message_text(
                 confirmation_text,
                 call.message.chat.id,
-                call.message.message_id
+                call.message.message_id,
+                reply_markup=markup
             )
             
             # Notify admins about new order for review
@@ -1009,8 +1019,12 @@ def process_username_step(message, plan_id):
             markup = types.InlineKeyboardMarkup()
             confirm_button = types.InlineKeyboardButton("💰 Payment Confirmed", callback_data=f"payment_confirmed:{order_id}")
             help_button = types.InlineKeyboardButton("🆘 Help with Payment", callback_data="payment_help")
+            plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+            main_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
             markup.add(confirm_button)
             markup.add(help_button)
+            markup.add(plans_button)
+            markup.add(main_button)
             
             bot.send_message(
                 message.chat.id,
@@ -1029,13 +1043,22 @@ def process_username_step(message, plan_id):
             # Notify admins about the new order
             notify_admins_about_order(new_order)
             
-            # Notify user
+            # Notify user with buttons
+            markup = types.InlineKeyboardMarkup()
+            plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+            orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+            main_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
+            markup.add(orders_button)
+            markup.add(plans_button)
+            markup.add(main_button)
+            
             bot.send_message(
                 message.chat.id,
                 "⚠️ Automatic payment creation is currently unavailable.\n\n"
                 f"Your order #{order_id} has been created and will be processed manually by our team.\n"
                 "We'll contact you shortly with payment instructions.",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
+                reply_markup=markup
             )
     except Exception as e:
         logger.error(f"Error creating payment: {e}")
@@ -1051,13 +1074,22 @@ def process_username_step(message, plan_id):
                 # Notify admins about the problematic order
                 notify_admins_about_order(new_order)
                 
-                # Notify user
+                # Notify user with navigation buttons
+                markup = types.InlineKeyboardMarkup()
+                plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+                orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+                main_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
+                markup.add(orders_button)
+                markup.add(plans_button)
+                markup.add(main_button)
+                
                 bot.send_message(
                     message.chat.id,
                     "⚠️ We encountered an issue with the payment processor.\n\n"
                     f"Your order #{order_id} has been created and will be processed manually by our team.\n"
                     "We'll contact you shortly with payment instructions.",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
+                    reply_markup=markup
                 )
             except Exception as inner_e:
                 logger.error(f"Error updating order after payment failure: {inner_e}")
