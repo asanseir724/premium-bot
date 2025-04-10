@@ -547,11 +547,19 @@ def admin_update_bot_settings():
     bot_token = request.form.get('bot_token', '')
     nowpayments_api_key = request.form.get('nowpayments_api_key', '')
     bot_enabled = 'bot_enabled' in request.form
+    has_sufficient_credit = 'has_sufficient_credit' in request.form
     
     # Save settings to config
     config_manager.set_config_value('bot_token', bot_token)
     config_manager.set_config_value('nowpayments_api_key', nowpayments_api_key)
     config_manager.set_config_value('bot_enabled', bot_enabled)
+    config_manager.set_config_value('has_sufficient_credit', has_sufficient_credit)
+    
+    # Log the supplier credit status change
+    if has_sufficient_credit:
+        logger.info("Supplier credit set to SUFFICIENT")
+    else:
+        logger.info("Supplier credit set to INSUFFICIENT")
     
     flash('Bot settings have been updated', 'success')
     return redirect(url_for('admin_bot_settings'))

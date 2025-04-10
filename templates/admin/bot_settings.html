@@ -88,6 +88,23 @@
                         </div>
                     </div>
                     
+                    <div class="card mb-4 bg-dark border-info">
+                        <div class="card-header bg-info bg-opacity-25 text-info">
+                            <h6 class="mb-0"><i data-feather="dollar-sign"></i> Supplier Credit Status</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-3">
+                                <input type="checkbox" class="form-check-input" id="has_sufficient_credit" name="has_sufficient_credit" 
+                                       {% if has_sufficient_credit %}checked{% endif %}>
+                                <label class="form-check-label" for="has_sufficient_credit">Sufficient Credit with Supplier</label>
+                            </div>
+                            <div class="alert alert-secondary small">
+                                <i data-feather="info"></i> When this option is enabled, the system will process orders automatically. 
+                                When disabled, orders will require manual confirmation after adding credit to your supplier account.
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Save Bot Settings</button>
                     </div>
