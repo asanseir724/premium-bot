@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Detail #{{ order.order_id }} - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Order Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-sm btn-outline-secondary mb-2">
+                    <i data-feather="arrow-left"></i> Back to Orders
+                </a>
+                <h2>Order #{{ order.order_id }}</h2>
+            </div>
+            <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }} fs-5">
+                {{ order.status.replace('_', ' ') }}
+            </span>
+        </div>
+
+        <div class="row">
+            <!-- Order Info Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Order Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="text-muted">Plan</h6>
+                            <p class="lead">{{ order.plan_name }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">Amount</h6>
+                            <p class="lead">${{ order.amount }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">Status</h6>
+                            <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }}">
+                                {{ order.status.replace('_', ' ') }}
+                            </span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">Created</h6>
+                            <p>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">Updated</h6>
+                            <p>{{ order.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        </div>
+                        
+                        {% if order.expires_at %}
+                        <div class="mb-3">
+                            <h6 class="text-muted">Expires</h6>
+                            <p>{{ order.expires_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Info Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">User Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="text-muted">Telegram Username</h6>
+                            <p class="lead">{{ order.telegram_username }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">User ID</h6>
+                            <p>{{ order.user.telegram_id }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">First Name</h6>
+                            <p>{{ order.user.first_name or 'Not provided' }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">Last Name</h6>
+                            <p>{{ order.user.last_name or 'Not provided' }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-muted">Registered</h6>
+                            <p>{{ order.user.created_at.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Info Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Payment Information</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if order.payment_id %}
+                        <div class="mb-3">
+                            <h6 class="text-muted">Payment ID</h6>
+                            <p>{{ order.payment_id }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if order.payment_url %}
+                        <div class="mb-3">
+                            <h6 class="text-muted">Payment URL</h6>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ order.payment_url }}" readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ order.payment_url }}">
+                                    <i data-feather="copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if order.payments %}
+                            <h6 class="text-muted mt-4 mb-3">Transaction History</h6>
+                            <table class="table table-sm table-dark">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Currency</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in order.payments %}
+                                    <tr>
+                                        <td>{{ payment.created_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ payment.amount }}</td>
+                                        <td>{{ payment.pay_currency }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if payment.status == 'COMPLETED' else 'warning' }}">
+                                                {{ payment.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <div class="alert alert-info mt-3">
+                                No payment transactions recorded yet.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Actions Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Admin Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h6 class="text-muted">Admin Notes</h6>
+                            <textarea class="form-control mb-2" rows="3" id="adminNotes" 
+                                     placeholder="Add notes about this order...">{{ order.admin_notes or '' }}</textarea>
+                            <button class="btn btn-sm btn-outline-primary saveNotes">Save Notes</button>
+                        </div>
+                        
+                        {% if order.activation_link %}
+                        <div class="mb-4">
+                            <h6 class="text-muted">Activation Link</h6>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ order.activation_link }}" readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ order.activation_link }}">
+                                    <i data-feather="copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex flex-column gap-2 mt-4">
+                            {% if order.status == 'ADMIN_REVIEW' or order.status == 'PAYMENT_RECEIVED' %}
+                                <form id="approveOrderForm" method="POST" action="{{ url_for('admin_approve_order', order_id=order.order_id) }}">
+                                    <div class="mb-3">
+                                        <label for="activationLink" class="form-label">Activation Link</label>
+                                        <input type="text" class="form-control" id="activationLink" name="activation_link" 
+                                               placeholder="https://t.me/premium/..." required>
+                                        <div class="form-text">Enter the Telegram Premium activation link</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100 mb-2">
+                                        <i data-feather="check"></i> Approve Order
+                                    </button>
+                                </form>
+                                
+                                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                    <i data-feather="x"></i> Reject Order
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Order Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectModalLabel">Reject Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rejectOrderForm" method="POST" action="{{ url_for('admin_reject_order', order_id=order.order_id) }}">
+                    <div class="mb-3">
+                        <label for="rejectionReason" class="form-label">Rejection Reason</label>
+                        <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="3" required></textarea>
+                        <div class="form-text">This reason will be sent to the customer</div>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">Confirm Rejection</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

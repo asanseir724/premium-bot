@@ -22,6 +22,8 @@
             "currency": "USD"
         }
     ],
-    "bot_admins": [],
+    "bot_admins": [
+        "118679725"
+    ],
     "support_contact": "@support"
 }

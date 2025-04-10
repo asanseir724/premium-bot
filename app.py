@@ -120,22 +120,52 @@ def admin_dashboard():
 @app.route('/admin/orders')
 @login_required
 def admin_orders():
+    # Filter by status
     status = request.args.get('status', '')
+    search = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     
+    query = Order.query
+    
+    # Apply status filter if provided
     if status:
-        orders = Order.query.filter_by(status=status).order_by(Order.created_at.desc()).all()
-    else:
-        orders = Order.query.order_by(Order.created_at.desc()).all()
-        
-    return render_template('admin/orders.html', orders=orders, current_status=status)
+        query = query.filter(Order.status == status)
+    
+    # Apply search if provided
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Order.order_id.like(search_term),
+                Order.telegram_username.like(search_term),
+                Order.status.like(search_term),
+                Order.plan_name.like(search_term)
+            )
+        )
+    
+    # Order by most recent first
+    query = query.order_by(Order.created_at.desc())
+    
+    # Paginate results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    orders = pagination.items
+    
+    return render_template(
+        'admin/orders.html', 
+        orders=orders, 
+        pagination=pagination,
+        current_status=status,
+        search_query=search
+    )
 
 @app.route('/admin/orders/<order_id>')
 @login_required
 def admin_order_detail(order_id):
     order = Order.query.filter_by(order_id=order_id).first_or_404()
-    payment = PaymentTransaction.query.filter_by(order_id=order.id).first()
+    payments = PaymentTransaction.query.filter_by(order_id=order.id).all()
     
-    return render_template('admin/order_details.html', order=order, payment=payment)
+    return render_template('admin/order_detail.html', order=order, payments=payments)
 
 @app.route('/admin/orders/<order_id>/approve', methods=['POST'])
 @login_required

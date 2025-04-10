@@ -54,49 +54,227 @@
             </div>
         </div>
         
-        <!-- Orders list -->
-        <div class="row">
-            {% if orders %}
-                {% for order in orders %}
-                <div class="col-md-6 mb-4">
-                    <div class="card order-card bg-dark">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Order #{{ order.order_id }}</h5>
-                            <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }}">
-                                {{ order.status.replace('_', ' ') }}
-                            </span>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Username:</strong> {{ order.telegram_username }}</p>
-                            <p><strong>Plan:</strong> {{ order.plan_name }}</p>
-                            <p><strong>Amount:</strong> ${{ order.amount }}</p>
-                            <p><strong>Date:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                            
-                            {% if order.payment_id %}
-                            <p><strong>Payment ID:</strong> {{ order.payment_id }}</p>
-                            {% endif %}
-                            
-                            <div class="d-grid">
-                                <a href="{{ url_for('admin_order_detail', order_id=order.order_id) }}" class="btn btn-primary">
-                                    View Details
-                                </a>
+        <!-- View toggle -->
+        <div class="btn-group mb-4">
+            <button type="button" class="btn btn-outline-primary view-toggle active" data-view="cards">
+                <i data-feather="grid"></i> Cards
+            </button>
+            <button type="button" class="btn btn-outline-primary view-toggle" data-view="table">
+                <i data-feather="list"></i> Table
+            </button>
+        </div>
+        
+        <!-- Search box -->
+        <div class="mb-4">
+            <div class="input-group">
+                <input type="text" id="orderSearch" class="form-control" placeholder="Search by Order ID, Username, or Status">
+                <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                    <i data-feather="search"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Orders table view (hidden by default) -->
+        <div id="tableView" class="orders-view d-none">
+            <div class="card dash-card mb-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Username</th>
+                                    <th>Plan</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if orders %}
+                                    {% for order in orders %}
+                                    <tr>
+                                        <td>{{ order.order_id }}</td>
+                                        <td>{{ order.telegram_username }}</td>
+                                        <td>{{ order.plan_name }}</td>
+                                        <td>${{ order.amount }}</td>
+                                        <td>
+                                            <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }}">
+                                                {{ order.status.replace('_', ' ') }}
+                                            </span>
+                                        </td>
+                                        <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <a href="{{ url_for('admin_order_detail', order_id=order.order_id) }}" class="btn btn-sm btn-primary">
+                                                <i data-feather="eye"></i>
+                                            </a>
+                                            {% if order.status == 'ADMIN_REVIEW' %}
+                                            <a href="{{ url_for('admin_order_detail', order_id=order.order_id) }}" class="btn btn-sm btn-success">
+                                                <i data-feather="check"></i>
+                                            </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            No orders found{% if current_status %} with status {{ current_status.replace('_', ' ') }}{% endif %}.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Orders cards view -->
+        <div id="cardsView" class="orders-view">
+            <div class="row">
+                {% if orders %}
+                    {% for order in orders %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card order-card bg-dark">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Order #{{ order.order_id }}</h5>
+                                <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }}">
+                                    {{ order.status.replace('_', ' ') }}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Username:</strong> {{ order.telegram_username }}</p>
+                                <p><strong>Plan:</strong> {{ order.plan_name }}</p>
+                                <p><strong>Amount:</strong> ${{ order.amount }}</p>
+                                <p><strong>Date:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                
+                                {% if order.payment_id %}
+                                <p><strong>Payment ID:</strong> {{ order.payment_id }}</p>
+                                {% endif %}
+                                
+                                <div class="d-grid">
+                                    <a href="{{ url_for('admin_order_detail', order_id=order.order_id) }}" class="btn btn-primary">
+                                        View Details
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="col-12">
-                    <div class="alert alert-info">
-                        No orders found{% if current_status %} with status {{ current_status.replace('_', ' ') }}{% endif %}.
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            No orders found{% if current_status %} with status {{ current_status.replace('_', ' ') }}{% endif %}.
+                        </div>
                     </div>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
+        
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+        <nav aria-label="Order pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="#" data-page="{{ pagination.prev_num }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                </li>
+                {% endif %}
+                
+                {% for page in pagination.iter_pages() %}
+                    {% if page %}
+                        {% if page != pagination.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="#" data-page="{{ page }}">{{ page }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="#" data-page="{{ pagination.next_num }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // View toggle functionality
+        const viewToggles = document.querySelectorAll('.view-toggle');
+        const orderViews = document.querySelectorAll('.orders-view');
+        
+        viewToggles.forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                // Remove active class from all toggles
+                viewToggles.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked toggle
+                this.classList.add('active');
+                
+                // Hide all views
+                orderViews.forEach(view => view.classList.add('d-none'));
+                
+                // Show selected view
+                const viewToShow = this.getAttribute('data-view');
+                document.getElementById(viewToShow + 'View').classList.remove('d-none');
+            });
+        });
+        
+        // Search functionality
+        const searchBtn = document.getElementById('searchBtn');
+        const searchInput = document.getElementById('orderSearch');
+        
+        if (searchBtn && searchInput) {
+            searchBtn.addEventListener('click', function() {
+                performSearch();
+            });
+            
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+        }
+        
+        function performSearch() {
+            const searchValue = searchInput.value.trim();
+            if (searchValue) {
+                // Construct search URL
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('search', searchValue);
+                window.location.href = currentUrl.toString();
+            }
+        }
+    });
+</script>
 {% endblock %}
