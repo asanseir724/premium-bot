@@ -1091,6 +1091,7 @@ def notify_admins_about_order(order):
             markup.add(view_button)
             
             # Send to channel using HTML parse mode
+            # Send to admin channel
             bot.send_message(
                 admin_channel, 
                 notification, 
@@ -1098,7 +1099,8 @@ def notify_admins_about_order(order):
                 reply_markup=markup
             )
             logger.info(f"Notification sent to admin channel: {admin_channel}")
-            return
+            
+            # Important: Do not return here, we want to try sending to public channel as well if configured
         except Exception as e:
             logger.error(f"Failed to send notification to admin channel {admin_channel}: {e}")
             # Continue to notify individual admins as fallback
@@ -1172,13 +1174,7 @@ def notify_admins_about_payment(order, transaction):
             )
             logger.info(f"Payment notification sent to admin channel: {admin_channel}")
             
-            # Also send to public channel if enabled
-            send_public_purchase_announcement(order, transaction)
-            
-            # Also notify the customer
-            notify_customer_about_payment(order, transaction)
-            
-            return
+            # Important: Do not return here, we want to continue even if admin channel notification succeeds
         except Exception as e:
             logger.error(f"Failed to send payment notification to admin channel {admin_channel}: {e}")
             # Continue to notify individual admins as fallback
