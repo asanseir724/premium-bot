@@ -157,9 +157,11 @@ def create_admin_menu():
     plans_button = types.InlineKeyboardButton("🏷️ Plans", callback_data="admin_plans")
     support_button = types.InlineKeyboardButton("🆘 Support", callback_data="admin_support")
     admins_button = types.InlineKeyboardButton("👨‍💼 Admins", callback_data="admin_admins")
+    channels_button = types.InlineKeyboardButton("📢 Channels", callback_data="admin_channels")
     
     markup.add(orders_button, plans_button)
     markup.add(support_button, admins_button)
+    markup.add(channels_button)
     
     return markup
 
@@ -532,6 +534,44 @@ def handle_callback_query(call):
             parse_mode="Markdown",
             reply_markup=create_admin_menu()
         )
+    
+    elif call.data == "admin_channels":
+        user_id = call.from_user.id
+        
+        if is_admin(user_id):
+            # Get current channel settings
+            admin_channel = config_manager.get_admin_channel()
+            public_channel = config_manager.get_public_channel()
+            notification_enabled = config_manager.get_config_value('notification_enabled', False)
+            
+            channels_text = (
+                "📢 *Channel Settings*\n\n"
+                f"*Admin Channel:* {admin_channel or 'Not set'}\n"
+                f"*Public Channel:* {public_channel or 'Not set'}\n"
+                f"*Public Notifications:* {'Enabled' if notification_enabled else 'Disabled'}\n\n"
+                "Please provide channel information using the format below:\n"
+                "```\n"
+                "admin: @channel_name or -100123456789\n"
+                "public: @channel_name or -100123456789\n"
+                "notifications: on/off\n"
+                "```\n\n"
+                "Please ensure that the bot has been added as an admin to the channels."
+            )
+            
+            markup = types.InlineKeyboardMarkup()
+            back_button = types.InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="back_to_admin")
+            markup.add(back_button)
+            
+            sent_msg = bot.edit_message_text(
+                channels_text,
+                call.message.chat.id,
+                call.message.message_id,
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+            
+            # Register the next step handler for channel settings
+            bot.register_next_step_handler(sent_msg, process_channel_settings)
     
     elif call.data == "admin_plans":
         user_id = call.from_user.id
