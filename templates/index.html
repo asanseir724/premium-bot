@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Telegram Premium Subscription Bot - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card bg-dark text-light">
+                <div class="card-body">
+                    <h1 class="mb-4">Telegram Premium Subscription Bot</h1>
+                    <p class="lead">
+                        Welcome to the Telegram Premium Subscription Bot admin panel. This system allows you to manage and sell Telegram Premium subscriptions using cryptocurrency payments.
+                    </p>
+                    
+                    <hr class="my-4">
+                    
+                    <h3>Features</h3>
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item bg-dark text-light">Subscription plan management</li>
+                        <li class="list-group-item bg-dark text-light">Cryptocurrency payment processing</li>
+                        <li class="list-group-item bg-dark text-light">Order management and approval workflow</li>
+                        <li class="list-group-item bg-dark text-light">User-friendly Telegram bot interface</li>
+                    </ul>
+                    
+                    <div class="d-grid gap-2 d-md-block">
+                        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Admin Login</a>
+                        <a href="https://t.me/telestars24bot" target="_blank" class="btn btn-outline-light btn-lg">Open Telegram Bot</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

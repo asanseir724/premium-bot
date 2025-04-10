@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Subscription Plans - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="tag"></i> Plans
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Subscription Plans</h2>
+        
+        <div class="row">
+            {% for plan in plans %}
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ plan.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h3 class="text-primary">${{ plan.price }}</h3>
+                            <p>{{ plan.description }}</p>
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editPlanModal{{ plan.id }}">
+                            Edit Plan
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Edit Plan Modal -->
+                <div class="modal fade" id="editPlanModal{{ plan.id }}" tabindex="-1" aria-labelledby="editPlanModalLabel{{ plan.id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content bg-dark">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editPlanModalLabel{{ plan.id }}">Edit Plan: {{ plan.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="updatePlanForm" method="POST" action="{{ url_for('admin_update_plan') }}">
+                                    <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                                    
+                                    <div class="mb-3">
+                                        <label for="plan_name{{ plan.id }}" class="form-label">Plan Name</label>
+                                        <input type="text" class="form-control" id="plan_name{{ plan.id }}" name="plan_name" value="{{ plan.name }}" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="plan_description{{ plan.id }}" class="form-label">Description</label>
+                                        <textarea class="form-control" id="plan_description{{ plan.id }}" name="plan_description" rows="3" required>{{ plan.description }}</textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="plan_price{{ plan.id }}" class="form-label">Price (USD)</label>
+                                        <input type="number" class="form-control" id="plan_price{{ plan.id }}" name="plan_price" value="{{ plan.price }}" step="0.01" min="0.01" required>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Update Plan</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

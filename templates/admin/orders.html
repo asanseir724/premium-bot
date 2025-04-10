@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Orders</h2>
+            
+            <!-- Status filter -->
+            <div class="form-group">
+                <select id="statusFilter" class="form-select">
+                    <option value="" {% if not current_status %}selected{% endif %}>All Orders</option>
+                    <option value="PENDING" {% if current_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                    <option value="AWAITING_PAYMENT" {% if current_status == 'AWAITING_PAYMENT' %}selected{% endif %}>Awaiting Payment</option>
+                    <option value="PAYMENT_RECEIVED" {% if current_status == 'PAYMENT_RECEIVED' %}selected{% endif %}>Payment Received</option>
+                    <option value="ADMIN_REVIEW" {% if current_status == 'ADMIN_REVIEW' %}selected{% endif %}>Admin Review</option>
+                    <option value="APPROVED" {% if current_status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                    <option value="REJECTED" {% if current_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                    <option value="COMPLETED" {% if current_status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                    <option value="EXPIRED" {% if current_status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Orders list -->
+        <div class="row">
+            {% if orders %}
+                {% for order in orders %}
+                <div class="col-md-6 mb-4">
+                    <div class="card order-card bg-dark">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Order #{{ order.order_id }}</h5>
+                            <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }}">
+                                {{ order.status.replace('_', ' ') }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Username:</strong> {{ order.telegram_username }}</p>
+                            <p><strong>Plan:</strong> {{ order.plan_name }}</p>
+                            <p><strong>Amount:</strong> ${{ order.amount }}</p>
+                            <p><strong>Date:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            
+                            {% if order.payment_id %}
+                            <p><strong>Payment ID:</strong> {{ order.payment_id }}</p>
+                            {% endif %}
+                            
+                            <div class="d-grid">
+                                <a href="{{ url_for('admin_order_detail', order_id=order.order_id) }}" class="btn btn-primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No orders found{% if current_status %} with status {{ current_status.replace('_', ' ') }}{% endif %}.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

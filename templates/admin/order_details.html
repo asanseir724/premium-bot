@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.order_id }} - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Order #{{ order.order_id }}</h2>
+            <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }} fs-6">
+                {{ order.status.replace('_', ' ') }}
+            </span>
+        </div>
+        
+        <div class="row">
+            <!-- Order details -->
+            <div class="col-md-7">
+                <div class="card dash-card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Order Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Username:</strong></div>
+                            <div class="col-md-8">{{ order.telegram_username }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Plan:</strong></div>
+                            <div class="col-md-8">{{ order.plan_name }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Amount:</strong></div>
+                            <div class="col-md-8">${{ order.amount }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Created:</strong></div>
+                            <div class="col-md-8">{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Updated:</strong></div>
+                            <div class="col-md-8">{{ order.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Expires:</strong></div>
+                            <div class="col-md-8">{{ order.expires_at.strftime('%Y-%m-%d %H:%M:%S') if order.expires_at else 'N/A' }}</div>
+                        </div>
+                        
+                        {% if order.activation_link %}
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Activation Link:</strong></div>
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-sm" value="{{ order.activation_link }}" readonly>
+                                    <button class="btn btn-outline-secondary btn-sm copy-btn" type="button" data-copy="{{ order.activation_link }}">
+                                        <i data-feather="copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if order.admin_notes %}
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Admin Notes:</strong></div>
+                            <div class="col-md-8">{{ order.admin_notes }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Payment information -->
+                <div class="card dash-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Payment Information</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if payment %}
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Payment ID:</strong></div>
+                                <div class="col-md-8">{{ payment.payment_id }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Amount:</strong></div>
+                                <div class="col-md-8">{{ payment.amount }} {{ payment.currency }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Pay Currency:</strong></div>
+                                <div class="col-md-8">{{ payment.pay_currency }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Status:</strong></div>
+                                <div class="col-md-8">
+                                    <span class="badge bg-{{ 'success' if payment.status == 'COMPLETED' else 'warning' }}">
+                                        {{ payment.status }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Created:</strong></div>
+                                <div class="col-md-8">{{ payment.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                            </div>
+                            {% if payment.completed_at %}
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Completed:</strong></div>
+                                <div class="col-md-8">{{ payment.completed_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-center">No payment information available for this order.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="col-md-5">
+                <div class="card dash-card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if order.status == 'ADMIN_REVIEW' or order.status == 'PAYMENT_RECEIVED' %}
+                            <!-- Approve order form -->
+                            <form id="approveOrderForm" method="POST" action="{{ url_for('admin_approve_order', order_id=order.order_id) }}" class="mb-3">
+                                <h6>Approve Order</h6>
+                                <div class="mb-3">
+                                    <label for="activation_link" class="form-label">Activation Link</label>
+                                    <input type="text" class="form-control" id="activation_link" name="activation_link" required>
+                                    <div class="form-text">Provide the activation link for the user</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="admin_notes" class="form-label">Admin Notes (Optional)</label>
+                                    <textarea class="form-control" id="admin_notes" name="admin_notes" rows="3"></textarea>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success">Approve Order</button>
+                                </div>
+                            </form>
+                            
+                            <hr>
+                            
+                            <!-- Reject order form -->
+                            <form id="rejectOrderForm" method="POST" action="{{ url_for('admin_reject_order', order_id=order.order_id) }}">
+                                <h6>Reject Order</h6>
+                                <div class="mb-3">
+                                    <label for="admin_notes_reject" class="form-label">Rejection Reason</label>
+                                    <textarea class="form-control" id="admin_notes_reject" name="admin_notes" rows="3" required></textarea>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger">Reject Order</button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert {{ 'alert-success' if order.status == 'APPROVED' or order.status == 'COMPLETED' else 'alert-danger' }}">
+                                This order is already {{ order.status.lower().replace('_', ' ') }} and cannot be modified.
+                            </div>
+                            
+                            <a href="{{ url_for('admin_orders') }}" class="btn btn-primary d-block">Back to Orders</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

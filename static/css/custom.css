@@ -1,0 +1,79 @@
+/* Custom styles for the admin panel */
+body {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+.order-card {
+    transition: all 0.3s ease;
+}
+
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.status-badge {
+    font-size: 0.85rem;
+    padding: 0.35em 0.65em;
+}
+
+.status-pending {
+    background-color: var(--bs-warning);
+    color: var(--bs-dark);
+}
+
+.status-approved {
+    background-color: var(--bs-success);
+    color: var(--bs-light);
+}
+
+.status-rejected {
+    background-color: var(--bs-danger);
+    color: var(--bs-light);
+}
+
+.status-payment-received {
+    background-color: var(--bs-info);
+    color: var(--bs-dark);
+}
+
+.status-awaiting-payment {
+    background-color: var(--bs-secondary);
+    color: var(--bs-light);
+}
+
+.status-expired {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+.admin-sidebar {
+    min-height: calc(100vh - 56px);
+    background-color: var(--bs-gray-900);
+}
+
+.dash-card {
+    border-radius: 10px;
+    border: none;
+    background-color: var(--bs-gray-800);
+}
+
+.dash-card .card-header {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dash-icon {
+    font-size: 2.5rem;
+    opacity: 0.7;
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--bs-primary);
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+}

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Dashboard</h2>
+        
+        <!-- Stats cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card dash-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">Pending Orders</h5>
+                                <h3 class="mb-0">{{ pending_count }}</h3>
+                            </div>
+                            <div class="dash-icon text-warning">
+                                <i data-feather="clock"></i>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('admin_orders', status='ADMIN_REVIEW') }}" class="btn btn-sm btn-outline-warning mt-3">View All</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dash-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">Completed Orders</h5>
+                                <h3 class="mb-0">{{ completed_count }}</h3>
+                            </div>
+                            <div class="dash-icon text-success">
+                                <i data-feather="check-circle"></i>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('admin_orders', status='COMPLETED') }}" class="btn btn-sm btn-outline-success mt-3">View All</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dash-card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">Successful Payments</h5>
+                                <h3 class="mb-0">{{ successful_payments }}</h3>
+                            </div>
+                            <div class="dash-icon text-info">
+                                <i data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent orders -->
+        <div class="card dash-card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Orders</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>User</th>
+                                <th>Plan</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_orders %}
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td>{{ order.order_id }}</td>
+                                    <td>{{ order.telegram_username }}</td>
+                                    <td>{{ order.plan_name }}</td>
+                                    <td>${{ order.amount }}</td>
+                                    <td>
+                                        <span class="badge status-badge status-{{ order.status.lower().replace('_', '-') }}">
+                                            {{ order.status.replace('_', ' ') }}
+                                        </span>
+                                    </td>
+                                    <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin_order_detail', order_id=order.order_id) }}" class="btn btn-sm btn-primary">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No recent orders found</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary">View All Orders</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}
