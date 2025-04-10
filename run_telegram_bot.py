@@ -1066,6 +1066,7 @@ def notify_admins_about_order(order):
     """Notify all admins about a new order for review"""
     admin_ids = config_manager.get_bot_admins()
     admin_channel = config_manager.get_admin_channel()
+    public_channel = config_manager.get_public_channel()
     
     # First try to send to admin channel if configured
     if admin_channel:
@@ -1082,16 +1083,15 @@ def notify_admins_about_order(order):
                 f"⚡️ Please review this order in the admin panel."
             )
             
-            # Create admin actions keyboard
+            # Create admin actions keyboard - using standard callback patterns that match the existing handlers
             markup = types.InlineKeyboardMarkup()
-            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
-            reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject:{order.order_id}")
-            view_button = types.InlineKeyboardButton("🔍 View Details", callback_data=f"admin_view:{order.order_id}")
+            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+            reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"reject_order:{order.order_id}")
+            view_button = types.InlineKeyboardButton("🔍 View Details", callback_data=f"review_order:{order.order_id}")
             markup.row(approve_button, reject_button)
             markup.add(view_button)
             
-            # Send to channel using HTML parse mode
-            # Send to admin channel
+            # Send to admin channel using HTML parse mode
             bot.send_message(
                 admin_channel, 
                 notification, 
@@ -1100,7 +1100,26 @@ def notify_admins_about_order(order):
             )
             logger.info(f"Notification sent to admin channel: {admin_channel}")
             
-            # Important: Do not return here, we want to try sending to public channel as well if configured
+            # Also send a notification to the public channel if configured and enabled
+            if public_channel and public_channel != admin_channel:
+                try:
+                    # Create a simpler notification for public channel
+                    public_notification = (
+                        f"🔔 <b>New Order Received!</b>\n\n"
+                        f"Plan: <b>{order.plan_name}</b>\n"
+                        f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+                        f"Order is being processed by our team."
+                    )
+                    
+                    bot.send_message(
+                        public_channel, 
+                        public_notification, 
+                        parse_mode="HTML"
+                    )
+                    logger.info(f"Notification sent to public channel: {public_channel}")
+                except Exception as e:
+                    logger.error(f"Failed to send notification to public channel {public_channel}: {e}")
+            
         except Exception as e:
             logger.error(f"Failed to send notification to admin channel {admin_channel}: {e}")
             # Continue to notify individual admins as fallback
@@ -1160,10 +1179,10 @@ def notify_admins_about_payment(order, transaction):
                 f"⚡️ This order is ready for activation."
             )
             
-            # Create admin actions keyboard
+            # Create admin actions keyboard using standard callback patterns
             markup = types.InlineKeyboardMarkup()
-            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
-            review_button = types.InlineKeyboardButton("🔍 Review Details", callback_data=f"admin_view:{order.order_id}")
+            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+            review_button = types.InlineKeyboardButton("🔍 Review Details", callback_data=f"review_order:{order.order_id}")
             markup.row(approve_button, review_button)
             
             bot.send_message(
@@ -1196,10 +1215,10 @@ def notify_admins_about_payment(order, transaction):
         f"ℹ️ Payment has been verified. This order is ready for processing."
     )
     
-    # Create inline keyboard for quick actions
+    # Create inline keyboard for quick actions using standard callback patterns
     markup = types.InlineKeyboardMarkup()
-    approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
-    review_button = types.InlineKeyboardButton("🔍 Review", callback_data=f"admin_view:{order.order_id}")
+    approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+    review_button = types.InlineKeyboardButton("🔍 Review", callback_data=f"review_order:{order.order_id}")
     markup.row(approve_button, review_button)
     
     for admin_id in admin_ids:
