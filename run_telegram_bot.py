@@ -1070,20 +1070,15 @@ def notify_admins_about_order(order):
     # First try to send to admin channel if configured
     if admin_channel:
         try:
-            # Format the username to avoid Markdown issues with @ symbol
-            safe_username = order.telegram_username
-            if safe_username and safe_username.startswith('@'):
-                safe_username = safe_username.replace("@", "")
-                safe_username = f"@{safe_username}"
-                
+            # Create HTML formatted notification
             notification = (
-                f"🔔 *New Order Requires Review*\n\n"
+                f"🔔 <b>New Order Requires Review</b>\n\n"
                 f"Order #: {order.order_id}\n"
                 f"Plan: {order.plan_name}\n"
-                f"Username: {safe_username}\n"
+                f"Username: {order.telegram_username}\n"
                 f"Amount: ${order.amount}\n"
                 f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
-                f"Status: {order.status}\n\n"
+                f"Status: <b>{order.status}</b>\n\n"
                 f"⚡️ Please review this order in the admin panel."
             )
             
@@ -1095,11 +1090,11 @@ def notify_admins_about_order(order):
             markup.row(approve_button, reject_button)
             markup.add(view_button)
             
-            # Send to channel
+            # Send to channel using HTML parse mode
             bot.send_message(
                 admin_channel, 
                 notification, 
-                parse_mode="Markdown",
+                parse_mode="HTML",
                 reply_markup=markup
             )
             logger.info(f"Notification sent to admin channel: {admin_channel}")
@@ -1113,8 +1108,9 @@ def notify_admins_about_order(order):
         logger.warning("No admin IDs configured for notifications")
         return
     
+    # Simpler notification for individual admins
     notification = (
-        f"🔔 *New Order Requires Review*\n\n"
+        f"🔔 <b>New Order Requires Review</b>\n\n"
         f"Order #: {order.order_id}\n"
         f"Plan: {order.plan_name}\n"
         f"Username: {order.telegram_username}\n"
@@ -1125,7 +1121,7 @@ def notify_admins_about_order(order):
     
     for admin_id in admin_ids:
         try:
-            bot.send_message(admin_id, notification, parse_mode="Markdown")
+            bot.send_message(admin_id, notification, parse_mode="HTML")
         except Exception as e:
             logger.error(f"Error sending notification to admin {admin_id}: {e}")
             
@@ -1149,17 +1145,12 @@ def notify_admins_about_payment(order, transaction):
     # First try to send to admin channel if configured
     if admin_channel:
         try:
-            # Format the username to avoid Markdown issues with @ symbol
-            safe_username = order.telegram_username
-            if safe_username and safe_username.startswith('@'):
-                safe_username = safe_username.replace("@", "")
-                safe_username = f"@{safe_username}"
-                
+            # Create HTML formatted notification
             notification = (
-                f"💰 *Payment Received!*\n\n"
+                f"💰 <b>Payment Received!</b>\n\n"
                 f"Order #: {order.order_id}\n"
                 f"Plan: {order.plan_name}\n"
-                f"Username: {safe_username}\n"
+                f"Username: {order.telegram_username}\n"
                 f"Amount: ${formatted_amount}\n"
                 f"Crypto: {crypto_amount} {crypto_currency}\n"
                 f"Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}\n\n"
@@ -1176,7 +1167,7 @@ def notify_admins_about_payment(order, transaction):
             bot.send_message(
                 admin_channel, 
                 notification, 
-                parse_mode="Markdown",
+                parse_mode="HTML",
                 reply_markup=markup
             )
             logger.info(f"Payment notification sent to admin channel: {admin_channel}")
@@ -1197,8 +1188,9 @@ def notify_admins_about_payment(order, transaction):
         logger.warning("No admin IDs configured for notifications")
         return
     
+    # HTML formatted notification for individual admins
     notification = (
-        f"💰 *Payment Received!*\n\n"
+        f"💰 <b>Payment Received!</b>\n\n"
         f"Order #: {order.order_id}\n"
         f"Plan: {order.plan_name}\n"
         f"Username: {order.telegram_username}\n"
@@ -1219,7 +1211,7 @@ def notify_admins_about_payment(order, transaction):
             bot.send_message(
                 admin_id, 
                 notification, 
-                parse_mode="Markdown",
+                parse_mode="HTML",
                 reply_markup=markup
             )
         except Exception as e:
@@ -1242,18 +1234,13 @@ def notify_customer_about_payment(order, transaction):
         # Format amount with 2 decimal places
         formatted_amount = "{:.2f}".format(transaction.amount)
             
-        # Format the username to avoid Markdown issues with @ symbol
-        safe_username = order.telegram_username
-        if safe_username and safe_username.startswith('@'):
-            safe_username = safe_username.replace("@", "")
-            safe_username = f"@{safe_username}"
-            
+        # HTML formatted notification
         customer_notification = (
-            f"💰 *Payment Received!*\n\n"
+            f"💰 <b>Payment Received!</b>\n\n"
             f"We've received your payment for order #{order.order_id}.\n\n"
-            f"*Order Details:*\n"
+            f"<b>Order Details:</b>\n"
             f"◾️ Plan: {order.plan_name}\n"
-            f"◾️ Username: {safe_username}\n"
+            f"◾️ Username: {order.telegram_username}\n"
             f"◾️ Amount: ${formatted_amount}\n\n"
             f"Your order is now being processed. You'll receive another message "
             f"when your Telegram Premium is activated."
@@ -1262,7 +1249,7 @@ def notify_customer_about_payment(order, transaction):
         bot.send_message(
             customer.telegram_id,
             customer_notification,
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
     except Exception as e:
         logger.error(f"Error notifying customer about payment: {e}")
@@ -1290,19 +1277,19 @@ def send_public_purchase_announcement(order, transaction):
         else:
             masked_username = "***"
             
-        # Create more attractive announcement with emojis and details
+        # Create more attractive announcement with emojis and details in HTML format
         announcement = (
-            f"🌟 *НОВАЯ ПРЕМИУМ-ПОДПИСКА!* 🌟\n\n"
+            f"🌟 <b>НОВАЯ ПРЕМИУМ-ПОДПИСКА!</b> 🌟\n\n"
             f"✨ Пользователь {masked_username} приобрел:\n"
-            f"💎 *{order.plan_name}*\n"
-            f"💰 Стоимость: *${formatted_amount}*\n\n"
+            f"💎 <b>{order.plan_name}</b>\n"
+            f"💰 Стоимость: <b>${formatted_amount}</b>\n\n"
             f"⚡️ Получите доступ к премиальным возможностям Telegram:\n"
             f"✓ Увеличение лимитов\n"
             f"✓ Эксклюзивные наклейки и реакции\n"
             f"✓ Улучшенная загрузка медиа\n"
             f"✓ Премиум значок\n"
             f"✓ И множество других функций!\n\n"
-            f"🔥 *Присоединяйтесь прямо сейчас!*"
+            f"🔥 <b>Присоединяйтесь прямо сейчас!</b>"
         )
         
         # Create attractive inline keyboard with multiple buttons
@@ -1323,7 +1310,7 @@ def send_public_purchase_announcement(order, transaction):
         bot.send_message(
             public_channel,
             announcement,
-            parse_mode="Markdown",
+            parse_mode="HTML",
             reply_markup=markup
         )
         logger.info(f"Purchase announcement sent to public channel: {public_channel}")
