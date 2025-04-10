@@ -502,14 +502,26 @@ def handle_callback_query(call):
                 reply_markup=markup
             )
     
-    elif call.data == "payment_confirmed":
+    elif call.data.startswith("payment_confirmed:"):
         user = get_or_create_user(call.message)
         
-        # Find the latest pending order for this user
+        # Extract order ID from callback data
+        order_id = call.data.split(':')[1]
+        logger.info(f"Payment confirmation received for order #{order_id}")
+        
+        # Find the specific order
         order = db_session.query(Order).filter_by(
-            user_id=user.id,
+            order_id=order_id,
             status="AWAITING_PAYMENT"
-        ).order_by(Order.created_at.desc()).first()
+        ).first()
+        
+        if not order:
+            # Try to find by user as fallback
+            logger.warning(f"Order #{order_id} not found, trying to find by user")
+            order = db_session.query(Order).filter_by(
+                user_id=user.id,
+                status="AWAITING_PAYMENT"
+            ).order_by(Order.created_at.desc()).first()
         
         if order:
             # Update order status
@@ -535,6 +547,33 @@ def handle_callback_query(call):
             notify_admins_about_order(order)
         else:
             bot.answer_callback_query(call.id, "No pending order found.", show_alert=True)
+            
+    elif call.data == "payment_help":
+        # Provide help with payment
+        payment_help_text = (
+            "💳 *How to pay with TRX (Tron)*\n\n"
+            "1️⃣ *Get TRX*: Purchase TRX from a cryptocurrency exchange like Binance, Coinbase, or similar platforms.\n\n"
+            "2️⃣ *Send Payment*: Transfer the exact amount of TRX to the wallet address provided in your order.\n\n"
+            "3️⃣ *Confirm Payment*: After sending the payment, click the 'Payment Confirmed' button in your order message.\n\n"
+            "⚠️ *Important Notes*:\n"
+            "- Send exactly the requested amount\n"
+            "- Make sure to use the Tron (TRX) network for your transaction\n"
+            "- Transaction confirmations may take 10-30 minutes\n\n"
+            "🆘 If you need further assistance, contact our support (/support)"
+        )
+        
+        # Create buttons for the help message
+        markup = types.InlineKeyboardMarkup()
+        back_button = types.InlineKeyboardButton("🔙 Back", callback_data="back_to_main")
+        support_button = types.InlineKeyboardButton("🆘 Contact Support", callback_data="support")
+        markup.add(back_button, support_button)
+        
+        bot.send_message(
+            call.message.chat.id,
+            payment_help_text,
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
 
 # Message handlers for multi-step processes
 def process_username_step(message, plan_id):
