@@ -1805,6 +1805,8 @@ def send_broadcast_message(broadcast_id):
     This function is meant to be run in a background thread
     """
     from models import BroadcastMessage
+    from app import app, db
+    import time
     
     try:
         # Get the broadcast message from the database
@@ -1819,7 +1821,7 @@ def send_broadcast_message(broadcast_id):
             db.session.commit()
             
             # Get all users
-            users = User.query.all()
+            users = db.session.query(User).all()
             total_users = len(users)
             sent_count = 0
             failed_count = 0
