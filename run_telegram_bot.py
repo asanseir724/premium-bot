@@ -209,6 +209,30 @@ def create_order_confirmation(plan):
 def handle_start(message):
     user = get_or_create_user(message)
     
+    # Check if user needs to subscribe to channel
+    if not check_channel_subscription(message.from_user.id):
+        required_channel = config_manager.get_required_channel()
+        
+        # Create "Join Channel" button
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        channel_name = required_channel
+        if not channel_name.startswith('@') and not channel_name.startswith('-100'):
+            channel_name = f"@{channel_name}"
+            
+        join_button = types.InlineKeyboardButton("📢 اشتراک در کانال", url=f"https://t.me/{channel_name.replace('@', '')}")
+        check_button = types.InlineKeyboardButton("✅ بررسی عضویت", callback_data="check_subscription")
+        markup.add(join_button, check_button)
+        
+        subscription_text = (
+            "⚠️ *عضویت اجباری*\n\n"
+            "برای استفاده از ربات، لطفاً در کانال زیر عضو شوید:\n"
+            f"{channel_name}\n\n"
+            "پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید."
+        )
+        
+        bot.send_message(message.chat.id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+        return
+    
     # Check if the start command has parameters
     command_parts = message.text.split()
     
@@ -287,6 +311,30 @@ def handle_start(message):
 
 @bot.message_handler(commands=['plans'])
 def handle_plans(message):
+    # Check if user needs to subscribe to channel
+    if not check_channel_subscription(message.from_user.id):
+        required_channel = config_manager.get_required_channel()
+        
+        # Create "Join Channel" button
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        channel_name = required_channel
+        if not channel_name.startswith('@') and not channel_name.startswith('-100'):
+            channel_name = f"@{channel_name}"
+            
+        join_button = types.InlineKeyboardButton("📢 اشتراک در کانال", url=f"https://t.me/{channel_name.replace('@', '')}")
+        check_button = types.InlineKeyboardButton("✅ بررسی عضویت", callback_data="check_subscription")
+        markup.add(join_button, check_button)
+        
+        subscription_text = (
+            "⚠️ *عضویت اجباری*\n\n"
+            "برای استفاده از ربات، لطفاً در کانال زیر عضو شوید:\n"
+            f"{channel_name}\n\n"
+            "پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید."
+        )
+        
+        bot.send_message(message.chat.id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+        return
+    
     plans = config_manager.get_subscription_plans()
     
     # Prepare plans message
@@ -302,6 +350,30 @@ def handle_plans(message):
 
 @bot.message_handler(commands=['orders', 'myorders'])
 def handle_my_orders(message):
+    # Check if user needs to subscribe to channel
+    if not check_channel_subscription(message.from_user.id):
+        required_channel = config_manager.get_required_channel()
+        
+        # Create "Join Channel" button
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        channel_name = required_channel
+        if not channel_name.startswith('@') and not channel_name.startswith('-100'):
+            channel_name = f"@{channel_name}"
+            
+        join_button = types.InlineKeyboardButton("📢 اشتراک در کانال", url=f"https://t.me/{channel_name.replace('@', '')}")
+        check_button = types.InlineKeyboardButton("✅ بررسی عضویت", callback_data="check_subscription")
+        markup.add(join_button, check_button)
+        
+        subscription_text = (
+            "⚠️ *عضویت اجباری*\n\n"
+            "برای استفاده از ربات، لطفاً در کانال زیر عضو شوید:\n"
+            f"{channel_name}\n\n"
+            "پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید."
+        )
+        
+        bot.send_message(message.chat.id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+        return
+        
     user = get_or_create_user(message)
     # Get user's orders from the database
     orders = db_session.query(Order).filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
@@ -781,17 +853,23 @@ def handle_callback_query(call):
             # Get current channel settings
             admin_channel = config_manager.get_admin_channel()
             public_channel = config_manager.get_public_channel()
+            required_channel = config_manager.get_required_channel()
             notification_enabled = config_manager.get_config_value('notification_enabled', False)
+            channel_subscription_required = config_manager.is_channel_subscription_required()
             
             channels_text = (
                 "📢 *Channel Settings*\n\n"
                 f"*Admin Channel:* {admin_channel or 'Not set'}\n"
                 f"*Public Channel:* {public_channel or 'Not set'}\n"
+                f"*Required Channel:* {required_channel or 'Not set'}\n"
+                f"*Channel Subscription Required:* {'Enabled' if channel_subscription_required else 'Disabled'}\n"
                 f"*Public Notifications:* {'Enabled' if notification_enabled else 'Disabled'}\n\n"
                 "Please provide channel information using the format below:\n"
                 "```\n"
                 "admin: @channel_name or -100123456789\n"
                 "public: @channel_name or -100123456789\n"
+                "required: @channel_name or -100123456789\n"
+                "required_subscription: on/off\n"
                 "notifications: on/off\n"
                 "```\n\n"
                 "Please ensure that the bot has been added as an admin to the channels."
@@ -1144,7 +1222,9 @@ def process_channel_settings(message):
             lines = message.text.strip().split('\n')
             admin_channel = None
             public_channel = None
+            required_channel = None
             notification_enabled = None
+            channel_subscription_required = None
             
             for line in lines:
                 line = line.strip().lower()
@@ -1153,6 +1233,11 @@ def process_channel_settings(message):
                     admin_channel = line.split(':', 1)[1].strip()
                 elif line.startswith('public:'):
                     public_channel = line.split(':', 1)[1].strip()
+                elif line.startswith('required:'):
+                    required_channel = line.split(':', 1)[1].strip()
+                elif line.startswith('required_subscription:'):
+                    value = line.split(':', 1)[1].strip()
+                    channel_subscription_required = value.lower() in ('on', 'yes', 'true', '1', 'enabled')
                 elif line.startswith('notifications:'):
                     value = line.split(':', 1)[1].strip()
                     notification_enabled = value.lower() in ('on', 'yes', 'true', '1', 'enabled')
@@ -1162,6 +1247,10 @@ def process_channel_settings(message):
                 config_manager.set_admin_channel(admin_channel)
             if public_channel is not None:
                 config_manager.set_public_channel(public_channel)
+            if required_channel is not None:
+                config_manager.set_required_channel(required_channel)
+            if channel_subscription_required is not None:
+                config_manager.set_channel_subscription_required(channel_subscription_required)
             if notification_enabled is not None:
                 config_manager.set_config_value('notification_enabled', notification_enabled)
             
@@ -1170,6 +1259,8 @@ def process_channel_settings(message):
                 "✅ Channel settings updated successfully:\n\n"
                 f"Admin Channel: {admin_channel or 'Not set'}\n"
                 f"Public Channel: {public_channel or 'Not set'}\n"
+                f"Required Channel: {required_channel or 'Not set'}\n"
+                f"Channel Subscription Required: {'Enabled' if channel_subscription_required else 'Disabled'}\n"
                 f"Public Notifications: {'Enabled' if notification_enabled else 'Disabled'}"
             )
             
@@ -1184,7 +1275,7 @@ def process_channel_settings(message):
             )
             
             logger.info(f"Channel settings updated by admin {user_id}")
-            logger.info(f"New settings - Admin: {admin_channel}, Public: {public_channel}, Notifications: {notification_enabled}")
+            logger.info(f"New settings - Admin: {admin_channel}, Public: {public_channel}, Required: {required_channel}, Subscription Required: {channel_subscription_required}, Notifications: {notification_enabled}")
             
         except Exception as e:
             logger.error(f"Error processing channel settings: {e}")
