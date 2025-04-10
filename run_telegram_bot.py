@@ -686,14 +686,21 @@ def handle_callback_query(call):
             # Ask for username
             username_request = (
                 "Please enter the Telegram username (with @) for which you want to activate Premium:\n\n"
-                "For example: @username"
+                "For example: @username\n\n"
+                "Or click the 'Back' button to return to plans."
             )
+            
+            # Create markup with back button
+            markup = types.InlineKeyboardMarkup()
+            back_button = types.InlineKeyboardButton("🔙 Back to Plans", callback_data="show_plans")
+            markup.add(back_button)
             
             # Save plan info in a temporary way
             sent_msg = bot.edit_message_text(
                 username_request,
                 call.message.chat.id,
-                call.message.message_id
+                call.message.message_id,
+                reply_markup=markup
             )
             
             # Register the next step handler
@@ -844,13 +851,20 @@ def handle_callback_query(call):
                     # Regular private chat flow
                     activation_request = (
                         f"Please enter the activation link for order #{order.order_id}:\n\n"
-                        f"This will be sent to the user {order.telegram_username}"
+                        f"This will be sent to the user {order.telegram_username}\n\n"
+                        f"Or click the 'Back' button to return."
                     )
+                    
+                    # Create markup with back button
+                    markup = types.InlineKeyboardMarkup()
+                    back_button = types.InlineKeyboardButton("🔙 Back", callback_data=f"review_order:{order.order_id}")
+                    markup.add(back_button)
                     
                     sent_msg = bot.edit_message_text(
                         activation_request,
                         call.message.chat.id,
-                        call.message.message_id
+                        call.message.message_id,
+                        reply_markup=markup
                     )
                     
                     # Register the next step handler
@@ -891,13 +905,20 @@ def handle_callback_query(call):
                     # Regular private chat flow
                     reason_request = (
                         f"Please enter the reason for rejecting order #{order.order_id}:\n\n"
-                        f"This will be sent to the user {order.telegram_username}"
+                        f"This will be sent to the user {order.telegram_username}\n\n"
+                        f"Or click the 'Back' button to return."
                     )
+                    
+                    # Create markup with back button
+                    markup = types.InlineKeyboardMarkup()
+                    back_button = types.InlineKeyboardButton("🔙 Back", callback_data=f"review_order:{order.order_id}")
+                    markup.add(back_button)
                     
                     sent_msg = bot.edit_message_text(
                         reason_request,
                         call.message.chat.id,
-                        call.message.message_id
+                        call.message.message_id,
+                        reply_markup=markup
                     )
                     
                     # Register the next step handler
