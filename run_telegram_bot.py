@@ -126,10 +126,11 @@ def create_main_menu():
     markup = types.InlineKeyboardMarkup(row_width=1)
     
     plans_button = types.InlineKeyboardButton("📱 Subscription Plans", callback_data="show_plans")
+    my_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
     help_button = types.InlineKeyboardButton("❓ Help", callback_data="help")
     support_button = types.InlineKeyboardButton("🆘 Support", callback_data="support")
     
-    markup.add(plans_button, help_button, support_button)
+    markup.add(plans_button, my_orders_button, help_button, support_button)
     
     return markup
 
@@ -272,6 +273,67 @@ def handle_plans(message):
     
     bot.send_message(message.chat.id, plans_text, parse_mode="Markdown", reply_markup=create_plans_menu())
 
+@bot.message_handler(commands=['orders', 'myorders'])
+def handle_my_orders(message):
+    user = get_or_create_user(message)
+    # Get user's orders from the database
+    orders = db_session.query(Order).filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
+    
+    if orders:
+        orders_text = "🛒 *Your Orders*\n\n"
+        
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        
+        for order in orders:
+            # Add emoji for order status
+            status_emoji = "⏳"  # Pending by default
+            if order.status == "APPROVED":
+                status_emoji = "✅"  # Approved
+            elif order.status == "REJECTED":
+                status_emoji = "❌"  # Rejected
+            elif order.status == "PAYMENT_RECEIVED":
+                status_emoji = "💰"  # Payment received
+            
+            # Format order information
+            orders_text += f"{status_emoji} *Order #{order.order_id}*\n"
+            orders_text += f"📱 Plan: {order.plan_name}\n"
+            orders_text += f"💵 Amount: ${order.amount}\n"
+            orders_text += f"📅 Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+            orders_text += f"🔄 Status: {order.status}\n"
+            
+            # Add activation link if approved
+            if order.status == "APPROVED" and order.activation_link:
+                orders_text += f"🔗 [Activation Link]({order.activation_link})\n"
+            
+            orders_text += "\n"
+            
+            # Add button to view order details
+            view_button = types.InlineKeyboardButton(
+                f"View Order #{order.order_id} Details",
+                callback_data=f"view_order:{order.order_id}"
+            )
+            markup.add(view_button)
+        
+        # Add back button
+        back_button = types.InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")
+        markup.add(back_button)
+        
+        bot.send_message(message.chat.id, orders_text, parse_mode="Markdown", reply_markup=markup)
+    else:
+        # No orders found
+        markup = types.InlineKeyboardMarkup()
+        plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+        back_button = types.InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")
+        markup.add(plans_button)
+        markup.add(back_button)
+        
+        bot.send_message(
+            message.chat.id,
+            "🛒 *Your Orders*\n\nYou don't have any orders yet. Browse our subscription plans to make a purchase!",
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+
 @bot.message_handler(commands=['help'])
 def handle_help(message):
     help_text = (
@@ -280,6 +342,7 @@ def handle_help(message):
         "*Available Commands:*\n"
         "/start - Start the bot and see the main menu\n"
         "/plans - View available subscription plans\n"
+        "/orders - View your orders\n"
         "/help - Show this help message\n"
         "/support - Contact support\n"
         "/admin - Access admin panel (for admins only)\n\n"
@@ -345,6 +408,68 @@ def handle_callback_query(call):
         
     elif call.data == "support":
         handle_support(call.message)
+        
+    elif call.data == "my_orders":
+        handle_my_orders(call.message)
+        
+    elif call.data.startswith("view_order:"):
+        order_id = call.data.split(":")[1]
+        # Get the user
+        user = get_or_create_user(call.message)
+        # Get the order
+        order = db_session.query(Order).filter_by(order_id=order_id, user_id=user.id).first()
+        
+        if order:
+            # Get payment info
+            payment = db_session.query(PaymentTransaction).filter_by(order_id=order.id).first()
+            
+            # Prepare order details message
+            order_details = (
+                f"🔍 *Order #{order.order_id} Details*\n\n"
+                f"📱 Plan: {order.plan_name}\n"
+                f"💰 Amount: ${order.amount}\n"
+                f"👤 Username: {order.telegram_username}\n"
+                f"📅 Created: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+                f"🔄 Status: {order.status}\n"
+            )
+            
+            # Add expiration date if available
+            if order.expires_at:
+                order_details += f"⏱️ Expires: {order.expires_at.strftime('%Y-%m-%d %H:%M')}\n"
+            
+            # Add activation link if approved
+            if order.status == "APPROVED" and order.activation_link:
+                order_details += f"\n🔗 [Activation Link]({order.activation_link})\n"
+            
+            # Add admin notes if available
+            if order.admin_notes:
+                order_details += f"\n📝 *Notes:*\n{order.admin_notes}\n"
+            
+            # Add payment details if available
+            if payment:
+                order_details += (
+                    f"\n💳 *Payment Information*\n"
+                    f"ID: {payment.payment_id}\n"
+                    f"Status: {payment.status}\n"
+                    f"Currency: {payment.pay_currency}\n"
+                )
+                
+                if payment.completed_at:
+                    order_details += f"Completed: {payment.completed_at.strftime('%Y-%m-%d %H:%M')}\n"
+            
+            # Create back button
+            markup = types.InlineKeyboardMarkup()
+            back_button = types.InlineKeyboardButton("🔙 Back to My Orders", callback_data="my_orders")
+            markup.add(back_button)
+            
+            bot.edit_message_text(
+                order_details,
+                call.message.chat.id,
+                call.message.message_id,
+                parse_mode="Markdown",
+                reply_markup=markup,
+                disable_web_page_preview=False  # Allow preview for activation link
+            )
     
     elif call.data.startswith("select_plan:"):
         plan_id = call.data.split(":")[1]
