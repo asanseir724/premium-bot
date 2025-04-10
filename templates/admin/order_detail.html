@@ -323,4 +323,61 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle the Callinoo toggle
+    const useCallinooCheckbox = document.getElementById('useCallinoo');
+    const manualActivationContainer = document.getElementById('manualActivationContainer');
+    const activationLinkInput = document.getElementById('activationLink');
+    const adminNotesTextarea = document.getElementById('adminNotes');
+    const approveFormNotes = document.getElementById('approveFormNotes');
+    
+    if (useCallinooCheckbox && manualActivationContainer && activationLinkInput) {
+      // Initial state
+      toggleManualActivation();
+      
+      // Add event listener for checkbox changes
+      useCallinooCheckbox.addEventListener('change', toggleManualActivation);
+      
+      function toggleManualActivation() {
+        if (useCallinooCheckbox.checked) {
+          manualActivationContainer.style.display = 'none';
+          activationLinkInput.removeAttribute('required');
+        } else {
+          manualActivationContainer.style.display = 'block';
+          activationLinkInput.setAttribute('required', 'required');
+        }
+      }
+    }
+    
+    // Sync admin notes to the approval form
+    const approveForm = document.getElementById('approveOrderForm');
+    if (approveForm && adminNotesTextarea && approveFormNotes) {
+      approveForm.addEventListener('submit', function() {
+        approveFormNotes.value = adminNotesTextarea.value;
+      });
+    }
+    
+    // Add copy button functionality
+    const copyButtons = document.querySelectorAll('.copy-btn');
+    copyButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const textToCopy = this.getAttribute('data-copy');
+        if (textToCopy) {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            // Change button text temporarily
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<i data-feather="check"></i>';
+            feather.replace();
+            
+            setTimeout(() => {
+              this.innerHTML = originalHTML;
+              feather.replace();
+            }, 1500);
+          });
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}

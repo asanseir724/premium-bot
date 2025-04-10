@@ -724,6 +724,73 @@ def admin_test_callinoo_connection():
     
     return redirect(url_for('admin_callinoo'))
 
+@app.route('/admin/callinoo/test_premium_creation', methods=['POST'])
+@login_required
+def admin_test_premium_creation():
+    """Test Telegram Premium subscription creation with Callinoo API"""
+    # Check if JSON request
+    if not request.is_json:
+        return jsonify({"success": False, "message": "Invalid request format. Expected JSON."}), 400
+    
+    # Get parameters from request
+    data = request.get_json()
+    telegram_username = data.get('telegram_username')
+    period = data.get('period', 'monthly')
+    
+    # Validate parameters
+    if not telegram_username:
+        return jsonify({"success": False, "message": "Telegram username is required"}), 400
+    
+    # Ensure username doesn't start with @
+    if telegram_username.startswith('@'):
+        telegram_username = telegram_username[1:]
+    
+    # Check if Callinoo is configured and enabled
+    callinoo_token = config_manager.get_config_value('callinoo_token', '')
+    use_callinoo_for_premium = config_manager.get_config_value('use_callinoo_for_premium', False)
+    
+    if not callinoo_token or not use_callinoo_for_premium:
+        return jsonify({
+            "success": False, 
+            "message": "Callinoo API is not configured or not enabled for Telegram Premium"
+        }), 400
+    
+    # Create premium subscription
+    try:
+        result = TelegramPremiumService.create_premium_subscription(
+            telegram_username=telegram_username,
+            period=period
+        )
+        
+        if result.get('success'):
+            # Try to automatically wait for activation
+            try:
+                order_id = result.get('order_id')
+                if order_id:
+                    activation_result = TelegramPremiumService.wait_for_subscription_activation(
+                        order_id=order_id,
+                        provider='callinoo',
+                        max_attempts=5,
+                        delay_seconds=2
+                    )
+                    
+                    if activation_result.get('activation_link'):
+                        result['activation_link'] = activation_result.get('activation_link')
+            except Exception as e:
+                logger.warning(f"Error waiting for activation: {str(e)}")
+                # Continue with original result even if activation wait fails
+            
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error creating premium subscription: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "message": f"Error creating premium subscription: {str(e)}",
+            "error": str(e)
+        }), 500
+
 @app.route('/admin/bot_settings')
 @login_required
 def admin_bot_settings():
