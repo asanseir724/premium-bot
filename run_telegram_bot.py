@@ -863,6 +863,86 @@ def process_username_step(message, plan_id):
                 "❌ Error creating payment. Please try again later or contact support."
             )
 
+def process_channel_settings(message):
+    """Process channel settings message from admin"""
+    user_id = message.from_user.id
+    
+    if is_admin(user_id):
+        try:
+            # Parse the text message to extract channel settings
+            lines = message.text.strip().split('\n')
+            admin_channel = None
+            public_channel = None
+            notification_enabled = None
+            
+            for line in lines:
+                line = line.strip().lower()
+                
+                if line.startswith('admin:'):
+                    admin_channel = line.split(':', 1)[1].strip()
+                elif line.startswith('public:'):
+                    public_channel = line.split(':', 1)[1].strip()
+                elif line.startswith('notifications:'):
+                    value = line.split(':', 1)[1].strip()
+                    notification_enabled = value.lower() in ('on', 'yes', 'true', '1', 'enabled')
+            
+            # Save the settings
+            if admin_channel is not None:
+                config_manager.set_admin_channel(admin_channel)
+            if public_channel is not None:
+                config_manager.set_public_channel(public_channel)
+            if notification_enabled is not None:
+                config_manager.set_config_value('notification_enabled', notification_enabled)
+            
+            # Send confirmation
+            confirmation = (
+                "✅ Channel settings updated successfully:\n\n"
+                f"Admin Channel: {admin_channel or 'Not set'}\n"
+                f"Public Channel: {public_channel or 'Not set'}\n"
+                f"Public Notifications: {'Enabled' if notification_enabled else 'Disabled'}"
+            )
+            
+            markup = types.InlineKeyboardMarkup()
+            back_button = types.InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="back_to_admin")
+            markup.add(back_button)
+            
+            bot.send_message(
+                message.chat.id,
+                confirmation,
+                reply_markup=markup
+            )
+            
+            logger.info(f"Channel settings updated by admin {user_id}")
+            logger.info(f"New settings - Admin: {admin_channel}, Public: {public_channel}, Notifications: {notification_enabled}")
+            
+        except Exception as e:
+            logger.error(f"Error processing channel settings: {e}")
+            
+            # Send error message
+            error_message = (
+                "❌ Error updating channel settings. Please use the correct format:\n\n"
+                "```\n"
+                "admin: @channel_name or -100123456789\n"
+                "public: @channel_name or -100123456789\n"
+                "notifications: on/off\n"
+                "```"
+            )
+            
+            markup = types.InlineKeyboardMarkup()
+            back_button = types.InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="back_to_admin")
+            retry_button = types.InlineKeyboardButton("🔄 Try Again", callback_data="admin_channels")
+            markup.add(retry_button)
+            markup.add(back_button)
+            
+            bot.send_message(
+                message.chat.id,
+                error_message,
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+    else:
+        bot.send_message(message.chat.id, "⛔ You don't have permission to perform this action.")
+
 def process_activation_link(message, order_id):
     user_id = message.from_user.id
     
