@@ -121,6 +121,38 @@ def is_admin(user_id):
     admin_ids = config_manager.get_bot_admins()
     return str(user_id) in admin_ids
 
+def create_subscription_required_message(chat_id, required_channel):
+    """
+    Creates and sends a message asking the user to subscribe to the required channel.
+    Uses English instead of Farsi.
+    
+    Args:
+        chat_id: The user's chat ID
+        required_channel: The channel username or ID
+    
+    Returns:
+        None
+    """
+    # Create "Join Channel" button
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    channel_name = required_channel
+    if not channel_name.startswith('@') and not channel_name.startswith('-100'):
+        channel_name = f"@{channel_name}"
+        
+    join_button = types.InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{channel_name.replace('@', '')}")
+    check_button = types.InlineKeyboardButton("✅ Check Subscription", callback_data="check_subscription")
+    markup.add(join_button, check_button)
+    
+    subscription_text = (
+        "⚠️ *Required Subscription*\n\n"
+        "To use this bot, you must join the following channel:\n"
+        f"{channel_name}\n\n"
+        "After joining, click the \"Check Subscription\" button below."
+    )
+    
+    bot.send_message(chat_id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+    return
+
 def check_channel_subscription(user_id):
     """
     Check if user is subscribed to required channel
@@ -212,25 +244,7 @@ def handle_start(message):
     # Check if user needs to subscribe to channel
     if not check_channel_subscription(message.from_user.id):
         required_channel = config_manager.get_required_channel()
-        
-        # Create "Join Channel" button
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        channel_name = required_channel
-        if not channel_name.startswith('@') and not channel_name.startswith('-100'):
-            channel_name = f"@{channel_name}"
-            
-        join_button = types.InlineKeyboardButton("📢 اشتراک در کانال", url=f"https://t.me/{channel_name.replace('@', '')}")
-        check_button = types.InlineKeyboardButton("✅ بررسی عضویت", callback_data="check_subscription")
-        markup.add(join_button, check_button)
-        
-        subscription_text = (
-            "⚠️ *عضویت اجباری*\n\n"
-            "برای استفاده از ربات، لطفاً در کانال زیر عضو شوید:\n"
-            f"{channel_name}\n\n"
-            "پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید."
-        )
-        
-        bot.send_message(message.chat.id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+        create_subscription_required_message(message.chat.id, required_channel)
         return
     
     # Check if the start command has parameters
@@ -314,25 +328,7 @@ def handle_plans(message):
     # Check if user needs to subscribe to channel
     if not check_channel_subscription(message.from_user.id):
         required_channel = config_manager.get_required_channel()
-        
-        # Create "Join Channel" button
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        channel_name = required_channel
-        if not channel_name.startswith('@') and not channel_name.startswith('-100'):
-            channel_name = f"@{channel_name}"
-            
-        join_button = types.InlineKeyboardButton("📢 اشتراک در کانال", url=f"https://t.me/{channel_name.replace('@', '')}")
-        check_button = types.InlineKeyboardButton("✅ بررسی عضویت", callback_data="check_subscription")
-        markup.add(join_button, check_button)
-        
-        subscription_text = (
-            "⚠️ *عضویت اجباری*\n\n"
-            "برای استفاده از ربات، لطفاً در کانال زیر عضو شوید:\n"
-            f"{channel_name}\n\n"
-            "پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید."
-        )
-        
-        bot.send_message(message.chat.id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+        create_subscription_required_message(message.chat.id, required_channel)
         return
     
     plans = config_manager.get_subscription_plans()
@@ -353,25 +349,7 @@ def handle_my_orders(message):
     # Check if user needs to subscribe to channel
     if not check_channel_subscription(message.from_user.id):
         required_channel = config_manager.get_required_channel()
-        
-        # Create "Join Channel" button
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        channel_name = required_channel
-        if not channel_name.startswith('@') and not channel_name.startswith('-100'):
-            channel_name = f"@{channel_name}"
-            
-        join_button = types.InlineKeyboardButton("📢 اشتراک در کانال", url=f"https://t.me/{channel_name.replace('@', '')}")
-        check_button = types.InlineKeyboardButton("✅ بررسی عضویت", callback_data="check_subscription")
-        markup.add(join_button, check_button)
-        
-        subscription_text = (
-            "⚠️ *عضویت اجباری*\n\n"
-            "برای استفاده از ربات، لطفاً در کانال زیر عضو شوید:\n"
-            f"{channel_name}\n\n"
-            "پس از عضویت، روی دکمه «بررسی عضویت» کلیک کنید."
-        )
-        
-        bot.send_message(message.chat.id, subscription_text, parse_mode="Markdown", reply_markup=markup)
+        create_subscription_required_message(message.chat.id, required_channel)
         return
         
     user = get_or_create_user(message)
@@ -489,9 +467,9 @@ def handle_callback_query(call):
         # Check if user is subscribed to the required channel
         if check_channel_subscription(call.from_user.id):
             # User is subscribed, show the main menu
-            bot.answer_callback_query(call.id, "✅ عضویت شما تایید شد!")
+            bot.answer_callback_query(call.id, "✅ Subscription confirmed!")
             bot.edit_message_text(
-                "به ربات اشتراک تلگرام خوش آمدید!\nلطفا یکی از گزینه‌های زیر را انتخاب کنید:",
+                "Welcome to the Telegram Premium Subscription Bot.\nPlease select an option from the menu below:",
                 call.message.chat.id,
                 call.message.message_id,
                 reply_markup=create_main_menu()
@@ -503,7 +481,7 @@ def handle_callback_query(call):
             if not channel_name.startswith('@') and not channel_name.startswith('-100'):
                 channel_name = f"@{channel_name}"
                 
-            bot.answer_callback_query(call.id, "⚠️ شما هنوز عضو کانال نشده‌اید!", show_alert=True)
+            bot.answer_callback_query(call.id, "⚠️ You haven't joined the channel yet!", show_alert=True)
             
     elif call.data == "show_plans":
         bot.edit_message_text(
