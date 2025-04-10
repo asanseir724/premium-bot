@@ -1143,28 +1143,8 @@ def process_rejection_reason(message, order_id):
             order.updated_at = datetime.utcnow()
             db_session.commit()
             
-            # Notify user about rejected order
-            try:
-                customer = db_session.query(User).get(order.user_id)
-                
-                if customer:
-                    rejection_message = (
-                        f"❌ Unfortunately, your order has been rejected.\n\n"
-                        f"📝 *Order Details:*\n"
-                        f"◾️ Plan: {order.plan_name}\n"
-                        f"◾️ Price: ${order.amount}\n"
-                        f"◾️ Order #: {order.order_id}\n\n"
-                        f"📌 Reason: {rejection_reason}\n\n"
-                        f"❓ For more information or assistance, contact our support (/support)."
-                    )
-                    
-                    bot.send_message(
-                        customer.telegram_id,
-                        rejection_message,
-                        parse_mode="Markdown"
-                    )
-            except Exception as e:
-                logger.error(f"Error notifying user about rejected order: {e}")
+            # Notify user about rejected order using the enhanced notification
+            notify_customer_about_rejection(order)
             
             # Confirmation for admin
             admin_confirmation = (
@@ -1506,6 +1486,53 @@ def notify_customer_about_approval(order):
         logger.exception(e)
         return False
         
+def notify_customer_about_rejection(order):
+    """Notify customer about their rejected order and reason"""
+    try:
+        # Find the user
+        customer = db_session.query(User).get(order.user_id)
+        if not customer:
+            logger.error(f"Customer not found for order {order.order_id}")
+            return False
+        
+        # Prepare rejection reason
+        rejection_reason = order.admin_notes or "No specific reason provided."
+        
+        # HTML formatted notification
+        customer_notification = (
+            f"❌ <b>Order Rejected</b>\n\n"
+            f"Unfortunately, your order for <b>{order.plan_name}</b> has been rejected.\n\n"
+            f"<b>Order Details:</b>\n"
+            f"◾️ Order #: {order.order_id}\n"
+            f"◾️ Username: {order.telegram_username}\n"
+            f"◾️ Amount: ${order.amount}\n"
+            f"◾️ Status: Rejected\n\n"
+            f"<b>Reason:</b>\n{rejection_reason}\n\n"
+            f"If you believe this was a mistake or need further assistance, please contact our support team."
+        )
+        
+        # Create notification with support button and view orders
+        markup = types.InlineKeyboardMarkup()
+        try_again_button = types.InlineKeyboardButton("🔄 Try Again", callback_data="show_plans")
+        view_order_button = types.InlineKeyboardButton("🔍 View Order Details", callback_data=f"view_order:{order.order_id}")
+        support_button = types.InlineKeyboardButton("🆘 Contact Support", callback_data="support")
+        
+        markup.add(try_again_button)
+        markup.add(view_order_button)
+        markup.add(support_button)
+        
+        bot.send_message(
+            customer.telegram_id,
+            customer_notification,
+            parse_mode="HTML",
+            reply_markup=markup
+        )
+        logger.info(f"Rejection notification sent to user {customer.telegram_id} for order #{order.order_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error notifying customer about rejection: {e}")
+        return False
+
 def send_public_purchase_announcement(order, transaction):
     """Send purchase announcement to public channel"""
     public_channel = config_manager.get_public_channel()
