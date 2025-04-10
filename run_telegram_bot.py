@@ -1085,8 +1085,8 @@ def notify_admins_about_order(order):
             
             # Create admin actions keyboard - using standard callback patterns that match the existing handlers
             markup = types.InlineKeyboardMarkup()
-            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
-            reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"reject_order:{order.order_id}")
+            approve_button = types.InlineKeyboardButton("✅ Activate Premium", callback_data=f"approve_order:{order.order_id}")
+            reject_button = types.InlineKeyboardButton("❌ Reject Order", callback_data=f"reject_order:{order.order_id}")
             view_button = types.InlineKeyboardButton("🔍 View Details", callback_data=f"review_order:{order.order_id}")
             markup.row(approve_button, reject_button)
             markup.add(view_button)
@@ -1179,9 +1179,9 @@ def notify_admins_about_payment(order, transaction):
                 f"⚡️ This order is ready for activation."
             )
             
-            # Create admin actions keyboard using standard callback patterns
+            # Create admin actions keyboard using standard callback patterns with clearer button text
             markup = types.InlineKeyboardMarkup()
-            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+            approve_button = types.InlineKeyboardButton("✅ Activate Premium", callback_data=f"approve_order:{order.order_id}")
             review_button = types.InlineKeyboardButton("🔍 Review Details", callback_data=f"review_order:{order.order_id}")
             markup.row(approve_button, review_button)
             
@@ -1215,9 +1215,9 @@ def notify_admins_about_payment(order, transaction):
         f"ℹ️ Payment has been verified. This order is ready for processing."
     )
     
-    # Create inline keyboard for quick actions using standard callback patterns
+    # Create inline keyboard for quick actions using standard callback patterns with clearer button text
     markup = types.InlineKeyboardMarkup()
-    approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+    approve_button = types.InlineKeyboardButton("✅ Activate Premium", callback_data=f"approve_order:{order.order_id}")
     review_button = types.InlineKeyboardButton("🔍 Review", callback_data=f"review_order:{order.order_id}")
     markup.row(approve_button, review_button)
     
