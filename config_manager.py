@@ -1,7 +1,7 @@
 import json
 import os
 import logging
-from config import SUBSCRIPTION_PLANS, BOT_ADMINS, SUPPORT_CONTACT
+from config import SUBSCRIPTION_PLANS, BOT_ADMINS, SUPPORT_CONTACT, ADMIN_CHANNEL, PUBLIC_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,9 @@ CONFIG_FILE = "config_data.json"
 DEFAULT_CONFIG = {
     "subscription_plans": SUBSCRIPTION_PLANS,
     "bot_admins": BOT_ADMINS,
-    "support_contact": SUPPORT_CONTACT
+    "support_contact": SUPPORT_CONTACT,
+    "admin_channel": ADMIN_CHANNEL,
+    "public_channel": PUBLIC_CHANNEL
 }
 
 # In-memory configuration
@@ -156,6 +158,38 @@ def set_support_contact(contact):
     _config["support_contact"] = contact
     _save_config()
     logger.info(f"Updated support contact: {contact}")
+    return True
+    
+def get_admin_channel():
+    """Get the admin notification channel"""
+    if _config is None:
+        _load_config()
+    return _config.get("admin_channel", "")
+    
+def set_admin_channel(channel_id):
+    """Set the admin notification channel"""
+    if _config is None:
+        _load_config()
+        
+    _config["admin_channel"] = channel_id
+    _save_config()
+    logger.info(f"Updated admin channel: {channel_id}")
+    return True
+    
+def get_public_channel():
+    """Get the public announcement channel"""
+    if _config is None:
+        _load_config()
+    return _config.get("public_channel", "")
+    
+def set_public_channel(channel_id):
+    """Set the public announcement channel"""
+    if _config is None:
+        _load_config()
+        
+    _config["public_channel"] = channel_id
+    _save_config()
+    logger.info(f"Updated public channel: {channel_id}")
     return True
 
 def get_config_value(key, default=None):

@@ -27,6 +27,10 @@ SUBSCRIPTION_PLANS = [
 BOT_ADMINS = []  # List of Telegram user IDs who are admins
 SUPPORT_CONTACT = "@support"  # Support contact username or link
 
+# Channel settings
+ADMIN_CHANNEL = ""  # Admin channel ID/username for notifications
+PUBLIC_CHANNEL = ""  # Public channel ID/username for announcing purchases
+
 # Payment settings
 DEFAULT_CURRENCY = "USD"
 PAYMENT_PROVIDER = "NowPayments"
