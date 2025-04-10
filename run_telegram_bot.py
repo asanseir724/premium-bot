@@ -1070,11 +1070,17 @@ def notify_admins_about_order(order):
     # First try to send to admin channel if configured
     if admin_channel:
         try:
+            # Format the username to avoid Markdown issues with @ symbol
+            safe_username = order.telegram_username
+            if safe_username and safe_username.startswith('@'):
+                safe_username = safe_username.replace("@", "")
+                safe_username = f"@{safe_username}"
+                
             notification = (
                 f"🔔 *New Order Requires Review*\n\n"
                 f"Order #: {order.order_id}\n"
                 f"Plan: {order.plan_name}\n"
-                f"Username: {order.telegram_username}\n"
+                f"Username: {safe_username}\n"
                 f"Amount: ${order.amount}\n"
                 f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
                 f"Status: {order.status}\n\n"
@@ -1143,11 +1149,17 @@ def notify_admins_about_payment(order, transaction):
     # First try to send to admin channel if configured
     if admin_channel:
         try:
+            # Format the username to avoid Markdown issues with @ symbol
+            safe_username = order.telegram_username
+            if safe_username and safe_username.startswith('@'):
+                safe_username = safe_username.replace("@", "")
+                safe_username = f"@{safe_username}"
+                
             notification = (
                 f"💰 *Payment Received!*\n\n"
                 f"Order #: {order.order_id}\n"
                 f"Plan: {order.plan_name}\n"
-                f"Username: {order.telegram_username}\n"
+                f"Username: {safe_username}\n"
                 f"Amount: ${formatted_amount}\n"
                 f"Crypto: {crypto_amount} {crypto_currency}\n"
                 f"Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}\n\n"
@@ -1230,12 +1242,18 @@ def notify_customer_about_payment(order, transaction):
         # Format amount with 2 decimal places
         formatted_amount = "{:.2f}".format(transaction.amount)
             
+        # Format the username to avoid Markdown issues with @ symbol
+        safe_username = order.telegram_username
+        if safe_username and safe_username.startswith('@'):
+            safe_username = safe_username.replace("@", "")
+            safe_username = f"@{safe_username}"
+            
         customer_notification = (
             f"💰 *Payment Received!*\n\n"
             f"We've received your payment for order #{order.order_id}.\n\n"
             f"*Order Details:*\n"
             f"◾️ Plan: {order.plan_name}\n"
-            f"◾️ Username: {order.telegram_username}\n"
+            f"◾️ Username: {safe_username}\n"
             f"◾️ Amount: ${formatted_amount}\n\n"
             f"Your order is now being processed. You'll receive another message "
             f"when your Telegram Premium is activated."
