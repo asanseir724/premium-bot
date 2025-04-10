@@ -1,0 +1,115 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Broadcast Messages{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Broadcast Messages</h1>
+    
+    <div class="row">
+        <!-- New Broadcast Message Form -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Send New Broadcast</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_send_broadcast') }}">
+                        <div class="mb-3">
+                            <label for="message_text" class="form-label">Message Text</label>
+                            <textarea class="form-control" id="message_text" name="message_text" rows="6" placeholder="Enter your broadcast message here..." required></textarea>
+                            <div class="form-text">
+                                <small>This message will be sent to all users ({{ total_users }} registered users).</small><br>
+                                <small>You can use Markdown formatting (e.g., *bold*, _italic_).</small>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Broadcast</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Broadcast History -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Broadcast History</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Sent/Failed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for message in messages %}
+                                        <tr data-bs-toggle="collapse" data-bs-target="#collapse-{{ message.id }}" class="clickable">
+                                            <td>{{ message.id }}</td>
+                                            <td>{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                {% if message.status == 'PENDING' %}
+                                                    <span class="badge bg-secondary">Pending</span>
+                                                {% elif message.status == 'SENDING' %}
+                                                    <span class="badge bg-info">Sending</span>
+                                                {% elif message.status == 'COMPLETED' %}
+                                                    <span class="badge bg-success">Completed</span>
+                                                {% elif message.status == 'FAILED' %}
+                                                    <span class="badge bg-danger">Failed</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ message.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ message.sent_count }}/{{ message.failed_count }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="4" class="p-0">
+                                                <div id="collapse-{{ message.id }}" class="collapse">
+                                                    <div class="p-3 bg-light">
+                                                        <h6>Message Content:</h6>
+                                                        <p class="mb-1">{{ message.message_text }}</p>
+                                                        <hr>
+                                                        <p class="mb-0">
+                                                            <small>Sent by: {{ message.admin.username }}</small><br>
+                                                            <small>
+                                                                Completed: 
+                                                                {% if message.completed_at %}
+                                                                    {{ message.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                                                                {% else %}
+                                                                    Not completed
+                                                                {% endif %}
+                                                            </small>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center py-3">No broadcast messages sent yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make rows clickable to expand details
+        document.querySelectorAll('tr.clickable').forEach(function(row) {
+            row.style.cursor = 'pointer';
+        });
+    });
+</script>
+{% endblock %}

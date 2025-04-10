@@ -1799,6 +1799,81 @@ def process_webhook_update(update_json):
         logger.exception(e)
         return False
 
+def send_broadcast_message(broadcast_id):
+    """
+    Send a broadcast message to all users
+    This function is meant to be run in a background thread
+    """
+    from models import BroadcastMessage
+    
+    try:
+        # Get the broadcast message from the database
+        with app.app_context():
+            broadcast = BroadcastMessage.query.get(broadcast_id)
+            if not broadcast:
+                logger.error(f"Broadcast message {broadcast_id} not found")
+                return False
+                
+            # Update status to sending
+            broadcast.status = "SENDING"
+            db.session.commit()
+            
+            # Get all users
+            users = User.query.all()
+            total_users = len(users)
+            sent_count = 0
+            failed_count = 0
+            
+            logger.info(f"Starting broadcast message {broadcast_id} to {total_users} users")
+            
+            # Send the message to all users
+            for user in users:
+                try:
+                    # Send the message
+                    bot.send_message(
+                        chat_id=user.telegram_id,
+                        text=broadcast.message_text,
+                        parse_mode="Markdown"
+                    )
+                    sent_count += 1
+                    
+                    # Update the broadcast stats periodically (every 10 users)
+                    if sent_count % 10 == 0:
+                        broadcast.sent_count = sent_count
+                        broadcast.failed_count = failed_count
+                        db.session.commit()
+                        
+                    # Add a small delay to avoid rate limiting
+                    time.sleep(0.1)
+                except Exception as e:
+                    logger.error(f"Error sending broadcast to user {user.telegram_id}: {str(e)}")
+                    failed_count += 1
+            
+            # Update final stats
+            broadcast.sent_count = sent_count
+            broadcast.failed_count = failed_count
+            broadcast.status = "COMPLETED"
+            broadcast.completed_at = datetime.utcnow()
+            db.session.commit()
+            
+            logger.info(f"Broadcast message {broadcast_id} completed: {sent_count} sent, {failed_count} failed")
+            return True
+    except Exception as e:
+        logger.error(f"Error processing broadcast message {broadcast_id}: {str(e)}")
+        logger.exception(e)
+        
+        # Update status to failed
+        try:
+            with app.app_context():
+                broadcast = BroadcastMessage.query.get(broadcast_id)
+                if broadcast:
+                    broadcast.status = "FAILED"
+                    db.session.commit()
+        except Exception as update_err:
+            logger.error(f"Error updating broadcast status: {str(update_err)}")
+            
+        return False
+
 if __name__ == "__main__":
     logger.info("Bot script started directly")
     

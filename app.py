@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, abort, session
 from flask_sqlalchemy import SQLAlchemy
@@ -40,7 +41,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # Import models after db is defined to avoid circular imports
-from models import User, Order, PaymentTransaction, AdminUser
+from models import User, Order, PaymentTransaction, AdminUser, BroadcastMessage
 
 # Import API clients
 import config_manager
