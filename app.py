@@ -45,8 +45,6 @@ from models import User, Order, PaymentTransaction, AdminUser
 # Import API clients
 import config_manager
 from nowpayments import NowPayments
-from callinoo import CallinooAPI
-from telegram_premium_service import TelegramPremiumService
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -189,97 +187,23 @@ def admin_order_detail(order_id):
 def admin_approve_order(order_id):
     order = Order.query.filter_by(order_id=order_id).first_or_404()
     
-    # Check if we should use Callinoo API for Telegram Premium
-    use_callinoo = TelegramPremiumService.is_callinoo_enabled()
-    
-    # Check if manual activation link is provided
+    # Get form data
     activation_link = request.form.get('activation_link', '')
     admin_notes = request.form.get('admin_notes', '')
     
-    # If Callinoo is enabled and no manual activation link is provided, use Callinoo API
-    if use_callinoo and not activation_link:
-        try:
-            logger.info(f"Using Callinoo API to create Telegram Premium for {order.telegram_username}")
-            
-            # Create the subscription via Callinoo API
-            # We assume monthly subscription for now, can be made configurable later
-            result = TelegramPremiumService.create_premium_subscription(
-                telegram_username=order.telegram_username,
-                period='monthly'  # This could be based on the plan or configurable
-            )
-            
-            if result['success']:
-                # Successfully created subscription
-                order.activation_link = result.get('activation_link', '')
-                callinoo_order_id = result.get('order_id', '')
-                
-                # Update status and notes
-                order.status = 'APPROVED'
-                order.updated_at = datetime.utcnow()
-                
-                # Add API response details to admin notes
-                new_note = f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] " + \
-                           f"Telegram Premium subscription created via Callinoo API. " + \
-                           f"Callinoo Order ID: {callinoo_order_id}"
-                
-                if admin_notes:
-                    order.admin_notes = admin_notes + "\n\n" + new_note
-                else:
-                    order.admin_notes = new_note
-                
-                # Add success message
-                flash(f'Order {order_id} has been approved and subscription created via Callinoo API', 'success')
-            else:
-                # API call failed
-                error_msg = result.get('message', 'Unknown error')
-                logger.error(f"Callinoo API error: {error_msg}")
-                
-                # Add error details to admin notes
-                new_note = f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] " + \
-                           f"Failed to create Telegram Premium via Callinoo API: {error_msg}"
-                
-                if admin_notes:
-                    order.admin_notes = admin_notes + "\n\n" + new_note
-                else:
-                    order.admin_notes = new_note
-                
-                # Keep original status if API fails
-                order.updated_at = datetime.utcnow()
-                
-                # Add error message
-                flash(f'Failed to create subscription via Callinoo API: {error_msg}', 'danger')
-                
-        except Exception as e:
-            logger.exception(f"Error using Callinoo API: {str(e)}")
-            
-            # Add error details to admin notes
-            new_note = f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] " + \
-                       f"Error using Callinoo API: {str(e)}"
-            
-            if admin_notes:
-                order.admin_notes = admin_notes + "\n\n" + new_note
-            else:
-                order.admin_notes = new_note
-            
-            # Keep original status if exception occurs
-            order.updated_at = datetime.utcnow()
-            
-            # Add error message
-            flash(f'Error using Callinoo API: {str(e)}', 'danger')
-    else:
-        # Standard approval process (manual or Callinoo disabled)
-        order.status = 'APPROVED'
-        order.updated_at = datetime.utcnow()
-        order.admin_notes = admin_notes
-        
-        # Set manual activation link if provided
-        if activation_link:
-            order.activation_link = activation_link
-            
-        flash(f'Order {order_id} has been approved', 'success')
+    # Update order
+    order.status = 'APPROVED'
+    order.updated_at = datetime.utcnow()
+    order.admin_notes = admin_notes
+    
+    # Set activation link if provided
+    if activation_link:
+        order.activation_link = activation_link
     
     # Save all changes
     db.session.commit()
+    
+    flash(f'Order {order_id} has been approved', 'success')
     
     # Trigger notification to user via Telegram bot (will be implemented in run_telegram_bot.py)
     # This is a placeholder and will be connected to the actual bot
