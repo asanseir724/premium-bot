@@ -1452,8 +1452,10 @@ def notify_customer_about_approval(order):
         # Create notification with activation link
         markup = types.InlineKeyboardMarkup()
         activate_button = types.InlineKeyboardButton("🚀 Activate Premium", url=order.activation_link)
+        view_order_button = types.InlineKeyboardButton("🔍 View Order Details", callback_data=f"view_order:{order.order_id}")
         support_button = types.InlineKeyboardButton("🆘 Need Help?", callback_data="support")
         markup.add(activate_button)
+        markup.add(view_order_button)
         markup.add(support_button)
         
         bot.send_message(
