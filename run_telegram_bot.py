@@ -179,7 +179,73 @@ def create_order_confirmation(plan):
 def handle_start(message):
     user = get_or_create_user(message)
     
-    # Welcome message
+    # Check if the start command has parameters
+    command_parts = message.text.split()
+    
+    if len(command_parts) > 1:
+        # Parse the start parameter
+        param = command_parts[1]
+        
+        if param == 'premium':
+            # User clicked "Get Premium" button
+            return handle_plans(message)
+        
+        elif param == 'prices':
+            # User clicked "Prices and Plans" button
+            return handle_plans(message)
+        
+        elif param == 'features':
+            # User clicked "Features" button
+            features_text = (
+                "✨ *Telegram Premium Features* ✨\n\n"
+                "💎 *Exclusive Access:*\n"
+                "• Custom stickers and reactions\n"
+                "• Premium badges and app icons\n"
+                "• Animated profile pictures\n\n"
+                
+                "🚀 *Enhanced Capabilities:*\n"
+                "• 4GB file uploads (instead of 2GB)\n"
+                "• Faster download speeds\n"
+                "• Voice-to-text conversion\n"
+                "• No ads in public channels\n\n"
+                
+                "📊 *Expanded Limits:*\n"
+                "• Join up to 1000 channels and groups\n"
+                "• Follow up to 1000 public channels\n"
+                "• Pin up to 10 chats in your main list\n"
+                "• Save up to 10 favorite stickers\n\n"
+                
+                "🔍 To purchase Premium, tap 'Plans' below 👇"
+            )
+            
+            markup = types.InlineKeyboardMarkup()
+            plans_button = types.InlineKeyboardButton("📱 View Plans", callback_data="show_plans")
+            markup.add(plans_button)
+            
+            bot.send_message(message.chat.id, features_text, parse_mode="Markdown", reply_markup=markup)
+            return
+        
+        elif param == 'support':
+            # User clicked "Support" button
+            return handle_support(message)
+        
+        elif param.startswith('order_'):
+            # Admin clicked "View Order" from notification
+            order_id = param[6:]  # Extract order ID part
+            if is_admin(message.from_user.id):
+                # Here we would show order details to admin
+                bot.send_message(message.chat.id, f"Loading order #{order_id} details...")
+                # Show dummy admin actions for now
+                markup = types.InlineKeyboardMarkup()
+                approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order_id}")
+                reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject:{order_id}")
+                markup.row(approve_button, reject_button)
+                bot.send_message(message.chat.id, f"Order #{order_id} loaded.", reply_markup=markup)
+            else:
+                bot.send_message(message.chat.id, "⛔ You don't have permission to view this order.")
+            return
+    
+    # Default welcome message
     welcome_text = (
         f"Hello, {message.from_user.first_name}! 👋\n\n"
         "Welcome to the Telegram Premium Subscription Bot.\n"
@@ -879,7 +945,44 @@ def process_rejection_reason(message, order_id):
 def notify_admins_about_order(order):
     """Notify all admins about a new order for review"""
     admin_ids = config_manager.get_bot_admins()
+    admin_channel = config_manager.get_admin_channel()
     
+    # First try to send to admin channel if configured
+    if admin_channel:
+        try:
+            notification = (
+                f"🔔 *New Order Requires Review*\n\n"
+                f"Order #: {order.order_id}\n"
+                f"Plan: {order.plan_name}\n"
+                f"Username: {order.telegram_username}\n"
+                f"Amount: ${order.amount}\n"
+                f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+                f"Status: {order.status}\n\n"
+                f"⚡️ Please review this order in the admin panel."
+            )
+            
+            # Create admin actions keyboard
+            markup = types.InlineKeyboardMarkup()
+            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
+            reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject:{order.order_id}")
+            view_button = types.InlineKeyboardButton("🔍 View Details", callback_data=f"admin_view:{order.order_id}")
+            markup.row(approve_button, reject_button)
+            markup.add(view_button)
+            
+            # Send to channel
+            bot.send_message(
+                admin_channel, 
+                notification, 
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+            logger.info(f"Notification sent to admin channel: {admin_channel}")
+            return
+        except Exception as e:
+            logger.error(f"Failed to send notification to admin channel {admin_channel}: {e}")
+            # Continue to notify individual admins as fallback
+    
+    # Fallback: Notify individual admins
     if not admin_ids:
         logger.warning("No admin IDs configured for notifications")
         return
@@ -903,10 +1006,7 @@ def notify_admins_about_order(order):
 def notify_admins_about_payment(order, transaction):
     """Notify all admins about a completed payment"""
     admin_ids = config_manager.get_bot_admins()
-    
-    if not admin_ids:
-        logger.warning("No admin IDs configured for notifications")
-        return
+    admin_channel = config_manager.get_admin_channel()
     
     # Format amount with 2 decimal places
     formatted_amount = "{:.2f}".format(transaction.amount)
@@ -919,6 +1019,51 @@ def notify_admins_about_payment(order, transaction):
         pay_amount = transaction.ipn_data.get('pay_amount')
         if pay_amount:
             crypto_amount = pay_amount
+    
+    # First try to send to admin channel if configured
+    if admin_channel:
+        try:
+            notification = (
+                f"💰 *Payment Received!*\n\n"
+                f"Order #: {order.order_id}\n"
+                f"Plan: {order.plan_name}\n"
+                f"Username: {order.telegram_username}\n"
+                f"Amount: ${formatted_amount}\n"
+                f"Crypto: {crypto_amount} {crypto_currency}\n"
+                f"Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}\n\n"
+                f"✅ Payment has been verified automatically.\n"
+                f"⚡️ This order is ready for activation."
+            )
+            
+            # Create admin actions keyboard
+            markup = types.InlineKeyboardMarkup()
+            approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
+            review_button = types.InlineKeyboardButton("🔍 Review Details", callback_data=f"admin_view:{order.order_id}")
+            markup.row(approve_button, review_button)
+            
+            bot.send_message(
+                admin_channel, 
+                notification, 
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+            logger.info(f"Payment notification sent to admin channel: {admin_channel}")
+            
+            # Also send to public channel if enabled
+            send_public_purchase_announcement(order, transaction)
+            
+            # Also notify the customer
+            notify_customer_about_payment(order, transaction)
+            
+            return
+        except Exception as e:
+            logger.error(f"Failed to send payment notification to admin channel {admin_channel}: {e}")
+            # Continue to notify individual admins as fallback
+    
+    # Fallback: Individual admin notifications if channel fails
+    if not admin_ids:
+        logger.warning("No admin IDs configured for notifications")
+        return
     
     notification = (
         f"💰 *Payment Received!*\n\n"
@@ -934,7 +1079,7 @@ def notify_admins_about_payment(order, transaction):
     # Create inline keyboard for quick actions
     markup = types.InlineKeyboardMarkup()
     approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
-    review_button = types.InlineKeyboardButton("🔍 Review", callback_data=f"admin_review:{order.order_id}")
+    review_button = types.InlineKeyboardButton("🔍 Review", callback_data=f"admin_view:{order.order_id}")
     markup.row(approve_button, review_button)
     
     for admin_id in admin_ids:
@@ -947,29 +1092,105 @@ def notify_admins_about_payment(order, transaction):
             )
         except Exception as e:
             logger.error(f"Error sending payment notification to admin {admin_id}: {e}")
-            
+    
+    # Also send to public channel if enabled
+    send_public_purchase_announcement(order, transaction)
+    
     # Also notify the customer
+    notify_customer_about_payment(order, transaction)
+
+def notify_customer_about_payment(order, transaction):
+    """Notify customer about their payment confirmation"""
     try:
         customer = db_session.query(User).get(order.user_id)
-        if customer:
-            customer_notification = (
-                f"💰 *Payment Received!*\n\n"
-                f"We've received your payment for order #{order.order_id}.\n\n"
-                f"*Order Details:*\n"
-                f"◾️ Plan: {order.plan_name}\n"
-                f"◾️ Username: {order.telegram_username}\n"
-                f"◾️ Amount: ${formatted_amount}\n\n"
-                f"Your order is now being processed. You'll receive another message "
-                f"when your Telegram Premium is activated."
-            )
+        if not customer:
+            logger.error(f"Customer not found for order {order.order_id}")
+            return
             
-            bot.send_message(
-                customer.telegram_id,
-                customer_notification,
-                parse_mode="Markdown"
-            )
+        # Format amount with 2 decimal places
+        formatted_amount = "{:.2f}".format(transaction.amount)
+            
+        customer_notification = (
+            f"💰 *Payment Received!*\n\n"
+            f"We've received your payment for order #{order.order_id}.\n\n"
+            f"*Order Details:*\n"
+            f"◾️ Plan: {order.plan_name}\n"
+            f"◾️ Username: {order.telegram_username}\n"
+            f"◾️ Amount: ${formatted_amount}\n\n"
+            f"Your order is now being processed. You'll receive another message "
+            f"when your Telegram Premium is activated."
+        )
+        
+        bot.send_message(
+            customer.telegram_id,
+            customer_notification,
+            parse_mode="Markdown"
+        )
     except Exception as e:
         logger.error(f"Error notifying customer about payment: {e}")
+        
+def send_public_purchase_announcement(order, transaction):
+    """Send purchase announcement to public channel"""
+    public_channel = config_manager.get_public_channel()
+    notification_enabled = config_manager.get_config_value("notification_enabled", False)
+    
+    if not public_channel or not notification_enabled:
+        return
+        
+    try:
+        # Format amount with 2 decimal places
+        formatted_amount = "{:.2f}".format(transaction.amount)
+        
+        # Hide full username for privacy - show only part
+        username = order.telegram_username
+        if username and len(username) > 4:
+            # Show first 2 characters, hide the rest with asterisks, then show @ if present
+            if username.startswith('@'):
+                masked_username = f"@{username[1:3]}{'*' * (len(username) - 3)}"
+            else:
+                masked_username = f"{username[0:2]}{'*' * (len(username) - 2)}"
+        else:
+            masked_username = "***"
+            
+        # Create more attractive announcement with emojis and details
+        announcement = (
+            f"🌟 *НОВАЯ ПРЕМИУМ-ПОДПИСКА!* 🌟\n\n"
+            f"✨ Пользователь {masked_username} приобрел:\n"
+            f"💎 *{order.plan_name}*\n"
+            f"💰 Стоимость: *${formatted_amount}*\n\n"
+            f"⚡️ Получите доступ к премиальным возможностям Telegram:\n"
+            f"✓ Увеличение лимитов\n"
+            f"✓ Эксклюзивные наклейки и реакции\n"
+            f"✓ Улучшенная загрузка медиа\n"
+            f"✓ Премиум значок\n"
+            f"✓ И множество других функций!\n\n"
+            f"🔥 *Присоединяйтесь прямо сейчас!*"
+        )
+        
+        # Create attractive inline keyboard with multiple buttons
+        markup = types.InlineKeyboardMarkup(row_width=2)
+        
+        # Main buttons
+        order_button = types.InlineKeyboardButton("💎 Получить Premium", url=f"https://t.me/{bot.get_me().username}?start=premium")
+        price_button = types.InlineKeyboardButton("💰 Цены и планы", url=f"https://t.me/{bot.get_me().username}?start=prices")
+        
+        # Information buttons
+        features_button = types.InlineKeyboardButton("✨ Возможности", url=f"https://t.me/{bot.get_me().username}?start=features")
+        support_button = types.InlineKeyboardButton("🆘 Поддержка", url=f"https://t.me/{bot.get_me().username}?start=support")
+        
+        # Add buttons in two rows
+        markup.add(order_button, price_button)
+        markup.add(features_button, support_button)
+        
+        bot.send_message(
+            public_channel,
+            announcement,
+            parse_mode="Markdown",
+            reply_markup=markup
+        )
+        logger.info(f"Purchase announcement sent to public channel: {public_channel}")
+    except Exception as e:
+        logger.error(f"Error sending purchase announcement to public channel: {e}")
 
 # Polling mode for development
 def start_polling():

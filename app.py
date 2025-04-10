@@ -360,9 +360,9 @@ def admin_remove_web_admin(admin_id):
 @app.route('/admin/channels')
 @login_required
 def admin_channels():
-    # Default values if not in config
-    admin_channel = config_manager.get_config_value('admin_channel', '@admin_channel')
-    public_channel = config_manager.get_config_value('public_channel', '@public_channel')
+    # Use the dedicated channel getter functions
+    admin_channel = config_manager.get_admin_channel()
+    public_channel = config_manager.get_public_channel()
     notification_enabled = config_manager.get_config_value('notification_enabled', False)
     
     return render_template('admin/channels.html', 
@@ -377,12 +377,12 @@ def admin_update_channels():
     public_channel = request.form.get('public_channel')
     notification_enabled = 'notification_enabled' in request.form
     
-    # Save to config
-    config_manager.set_config_value('admin_channel', admin_channel)
-    config_manager.set_config_value('public_channel', public_channel)
+    # Save to config using the dedicated functions
+    config_manager.set_admin_channel(admin_channel)
+    config_manager.set_public_channel(public_channel)
     config_manager.set_config_value('notification_enabled', notification_enabled)
     
-    flash('Channel settings have been updated', 'success')
+    flash('Channel settings have been updated successfully', 'success')
     return redirect(url_for('admin_channels'))
 
 @app.route('/admin/webhooks')
