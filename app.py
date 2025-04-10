@@ -383,23 +383,31 @@ def admin_channels():
     # Use the dedicated channel getter functions
     admin_channel = config_manager.get_admin_channel()
     public_channel = config_manager.get_public_channel()
+    required_channel = config_manager.get_required_channel()
     notification_enabled = config_manager.get_config_value('notification_enabled', False)
+    channel_subscription_required = config_manager.is_channel_subscription_required()
     
     return render_template('admin/channels.html', 
                            admin_channel=admin_channel, 
                            public_channel=public_channel,
-                           notification_enabled=notification_enabled)
+                           required_channel=required_channel,
+                           notification_enabled=notification_enabled,
+                           channel_subscription_required=channel_subscription_required)
 
 @app.route('/admin/channels/update', methods=['POST'])
 @login_required
 def admin_update_channels():
     admin_channel = request.form.get('admin_channel')
     public_channel = request.form.get('public_channel')
+    required_channel = request.form.get('required_channel')
     notification_enabled = 'notification_enabled' in request.form
+    channel_subscription_required = 'channel_subscription_required' in request.form
     
     # Save to config using the dedicated functions
     config_manager.set_admin_channel(admin_channel)
     config_manager.set_public_channel(public_channel)
+    config_manager.set_required_channel(required_channel)
+    config_manager.set_channel_subscription_required(channel_subscription_required)
     config_manager.set_config_value('notification_enabled', notification_enabled)
     
     flash('Channel settings have been updated successfully', 'success')

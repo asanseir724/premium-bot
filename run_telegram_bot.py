@@ -485,7 +485,27 @@ def handle_admin(message):
 # Callback query handlers
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
-    if call.data == "show_plans":
+    if call.data == "check_subscription":
+        # Check if user is subscribed to the required channel
+        if check_channel_subscription(call.from_user.id):
+            # User is subscribed, show the main menu
+            bot.answer_callback_query(call.id, "✅ عضویت شما تایید شد!")
+            bot.edit_message_text(
+                "به ربات اشتراک تلگرام خوش آمدید!\nلطفا یکی از گزینه‌های زیر را انتخاب کنید:",
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=create_main_menu()
+            )
+        else:
+            # User is not subscribed yet
+            required_channel = config_manager.get_required_channel()
+            channel_name = required_channel
+            if not channel_name.startswith('@') and not channel_name.startswith('-100'):
+                channel_name = f"@{channel_name}"
+                
+            bot.answer_callback_query(call.id, "⚠️ شما هنوز عضو کانال نشده‌اید!", show_alert=True)
+            
+    elif call.data == "show_plans":
         bot.edit_message_text(
             "📱 *Available Subscription Plans*\n\nSelect a plan to proceed with your purchase:",
             call.message.chat.id,
@@ -775,21 +795,41 @@ def handle_callback_query(call):
                         f"Status: {payment.status}\n"
                     )
                 
-                markup = types.InlineKeyboardMarkup(row_width=2)
-                approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
-                reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"reject_order:{order.order_id}")
-                back_button = types.InlineKeyboardButton("🔙 Back to Orders", callback_data="admin_orders")
-                
-                markup.add(approve_button, reject_button)
-                markup.add(back_button)
-                
-                bot.edit_message_text(
-                    order_details,
-                    call.message.chat.id,
-                    call.message.message_id,
-                    parse_mode="Markdown",
-                    reply_markup=markup
-                )
+                # Check if this is from a channel message
+                if hasattr(call.message, 'sender_chat') and call.message.sender_chat and call.message.sender_chat.type == 'channel':
+                    # For channel messages, we just acknowledge and open in private chat
+                    bot.answer_callback_query(call.id, "🔍 Opening order details in private chat...")
+                    
+                    # Create buttons for private chat
+                    markup = types.InlineKeyboardMarkup(row_width=2)
+                    approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+                    reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"reject_order:{order.order_id}")
+                    markup.add(approve_button, reject_button)
+                    
+                    # Send to admin's private chat
+                    bot.send_message(
+                        user_id,  # Send to admin's private chat
+                        order_details,
+                        parse_mode="Markdown",
+                        reply_markup=markup
+                    )
+                else:
+                    # Regular private chat handling
+                    markup = types.InlineKeyboardMarkup(row_width=2)
+                    approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"approve_order:{order.order_id}")
+                    reject_button = types.InlineKeyboardButton("❌ Reject", callback_data=f"reject_order:{order.order_id}")
+                    back_button = types.InlineKeyboardButton("🔙 Back to Orders", callback_data="admin_orders")
+                    
+                    markup.add(approve_button, reject_button)
+                    markup.add(back_button)
+                    
+                    bot.edit_message_text(
+                        order_details,
+                        call.message.chat.id,
+                        call.message.message_id,
+                        parse_mode="Markdown",
+                        reply_markup=markup
+                    )
     
     elif call.data.startswith("approve_order:"):
         user_id = call.from_user.id
@@ -799,20 +839,44 @@ def handle_callback_query(call):
             order = db_session.query(Order).filter_by(order_id=order_id).first()
             
             if order:
-                # Ask for activation link
-                activation_request = (
-                    f"Please enter the activation link for order #{order.order_id}:\n\n"
-                    f"This will be sent to the user {order.telegram_username}"
-                )
-                
-                sent_msg = bot.edit_message_text(
-                    activation_request,
-                    call.message.chat.id,
-                    call.message.message_id
-                )
-                
-                # Register the next step handler
-                bot.register_next_step_handler(sent_msg, process_activation_link, order_id=order.order_id)
+                # Check if this is a callback from a channel
+                if hasattr(call.message, 'sender_chat') and call.message.sender_chat and call.message.sender_chat.type == 'channel':
+                    # When in a channel, we can't edit message and use next_step_handler
+                    # So we send a direct message to the admin instead
+                    bot.answer_callback_query(call.id, "✅ Opening order approval in private chat...")
+                    
+                    # Send a new message to the admin's private chat
+                    activation_request = (
+                        f"✅ *Order Approval - #{order.order_id}*\n\n"
+                        f"Please enter the activation link for order #{order.order_id}:\n\n"
+                        f"This will be sent to {order.telegram_username}\n\n"
+                        f"*Reply to this message with the activation link*"
+                    )
+                    
+                    # We need to send a new message to the admin's private chat
+                    sent_msg = bot.send_message(
+                        user_id,  # Send to admin's private chat
+                        activation_request,
+                        parse_mode="Markdown"
+                    )
+                    
+                    # Register the next step handler for the private message
+                    bot.register_next_step_handler(sent_msg, process_activation_link, order_id=order.order_id)
+                else:
+                    # Regular private chat flow
+                    activation_request = (
+                        f"Please enter the activation link for order #{order.order_id}:\n\n"
+                        f"This will be sent to the user {order.telegram_username}"
+                    )
+                    
+                    sent_msg = bot.edit_message_text(
+                        activation_request,
+                        call.message.chat.id,
+                        call.message.message_id
+                    )
+                    
+                    # Register the next step handler
+                    bot.register_next_step_handler(sent_msg, process_activation_link, order_id=order.order_id)
     
     elif call.data.startswith("reject_order:"):
         user_id = call.from_user.id
@@ -822,20 +886,44 @@ def handle_callback_query(call):
             order = db_session.query(Order).filter_by(order_id=order_id).first()
             
             if order:
-                # Ask for rejection reason
-                reason_request = (
-                    f"Please enter the reason for rejecting order #{order.order_id}:\n\n"
-                    f"This will be sent to the user {order.telegram_username}"
-                )
-                
-                sent_msg = bot.edit_message_text(
-                    reason_request,
-                    call.message.chat.id,
-                    call.message.message_id
-                )
-                
-                # Register the next step handler
-                bot.register_next_step_handler(sent_msg, process_rejection_reason, order_id=order.order_id)
+                # Check if this is a callback from a channel
+                if hasattr(call.message, 'sender_chat') and call.message.sender_chat and call.message.sender_chat.type == 'channel':
+                    # When in a channel, we can't edit message and use next_step_handler
+                    # So we send a direct message to the admin instead
+                    bot.answer_callback_query(call.id, "❌ Opening order rejection in private chat...")
+                    
+                    # Send a new message to the admin's private chat
+                    rejection_request = (
+                        f"❌ *Order Rejection - #{order.order_id}*\n\n"
+                        f"Please enter the reason for rejecting order #{order.order_id}:\n\n"
+                        f"This will be sent to {order.telegram_username}\n\n"
+                        f"*Reply to this message with the rejection reason*"
+                    )
+                    
+                    # We need to send a new message to the admin's private chat
+                    sent_msg = bot.send_message(
+                        user_id,  # Send to admin's private chat
+                        rejection_request,
+                        parse_mode="Markdown"
+                    )
+                    
+                    # Register the next step handler for the private message
+                    bot.register_next_step_handler(sent_msg, process_rejection_reason, order_id=order.order_id)
+                else:
+                    # Regular private chat flow
+                    reason_request = (
+                        f"Please enter the reason for rejecting order #{order.order_id}:\n\n"
+                        f"This will be sent to the user {order.telegram_username}"
+                    )
+                    
+                    sent_msg = bot.edit_message_text(
+                        reason_request,
+                        call.message.chat.id,
+                        call.message.message_id
+                    )
+                    
+                    # Register the next step handler
+                    bot.register_next_step_handler(sent_msg, process_rejection_reason, order_id=order.order_id)
     
     elif call.data == "back_to_admin":
         bot.edit_message_text(
@@ -1286,6 +1374,8 @@ def process_channel_settings(message):
                 "```\n"
                 "admin: @channel_name or -100123456789\n"
                 "public: @channel_name or -100123456789\n"
+                "required: @channel_name or -100123456789\n"
+                "required_subscription: on/off\n"
                 "notifications: on/off\n"
                 "```"
             )

@@ -67,6 +67,25 @@
                         </div>
                     </div>
                     
+                    <div class="mb-3">
+                        <label for="required_channel" class="form-label">Required Channel (کانال اجباری)</label>
+                        <input type="text" class="form-control" id="required_channel" name="required_channel" 
+                               value="{{ required_channel }}" placeholder="@required_channel یا -100xxxxxxxxx">
+                        <div class="form-text">
+                            کانالی که کاربران برای استفاده از ربات باید عضو آن باشند.
+                            ربات باید به عنوان ادمین به این کانال اضافه شود.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="channel_subscription_required" name="channel_subscription_required" 
+                               {% if channel_subscription_required %}checked{% endif %}>
+                        <label class="form-check-label" for="channel_subscription_required">اجباری کردن عضویت در کانال</label>
+                        <div class="form-text">
+                            در صورت فعال بودن، کاربران برای استفاده از ربات باید در کانال بالا عضو باشند.
+                        </div>
+                    </div>
+                    
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="notification_enabled" name="notification_enabled" 
                                {% if notification_enabled %}checked{% endif %}>
