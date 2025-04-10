@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Callinoo Settings - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_bot_settings') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="settings"></i> Bot Settings
+                </a>
+                <a href="{{ url_for('admin_callinoo') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="smartphone"></i> Callinoo API
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Callinoo API Settings</h2>
+        
+        <div class="card dash-card">
+            <div class="card-header">
+                <h5 class="mb-0">Callinoo Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Configure the Callinoo API for automatic Telegram Premium subscriptions.
+                </p>
+                
+                <form method="POST" action="{{ url_for('admin_update_callinoo') }}">
+                    <div class="mb-3">
+                        <label for="callinoo_token" class="form-label">Callinoo API Token</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="callinoo_token" name="callinoo_token" 
+                                   value="{{ callinoo_token }}" placeholder="118679725:GWszBVC6qxYVK3aH6aWsf6XhsuEKTnbTNpV7mh5HEyuw">
+                            <button class="btn btn-outline-primary" type="button" id="toggleToken">
+                                <i data-feather="eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Enter your Callinoo API token for processing Telegram Premium subscriptions automatically.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="use_callinoo_for_premium" name="use_callinoo_for_premium" 
+                               {% if use_callinoo_for_premium %}checked{% endif %}>
+                        <label class="form-check-label" for="use_callinoo_for_premium">Use Callinoo for Telegram Premium</label>
+                        <div class="form-text">
+                            When enabled, the system will use Callinoo API to automatically process Telegram Premium subscriptions.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Save Callinoo Settings</button>
+                    </div>
+                </form>
+                
+                {% if callinoo_token %}
+                <div class="mt-4">
+                    <h6>Callinoo API Status</h6>
+                    
+                    {% if callinoo_balance %}
+                    <div class="alert alert-info mt-3">
+                        <div class="d-flex align-items-center">
+                            <i data-feather="credit-card" class="me-2"></i>
+                            <div>
+                                <strong>Current Balance:</strong> {{ callinoo_balance.balance }} {{ callinoo_balance.currency }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        <form method="POST" action="{{ url_for('admin_check_callinoo_balance') }}" class="d-inline">
+                            <button type="submit" class="btn btn-info">
+                                <i data-feather="refresh-cw"></i> Check Balance
+                            </button>
+                        </form>
+                        
+                        <form method="POST" action="{{ url_for('admin_test_callinoo_connection') }}" class="d-inline">
+                            <button type="submit" class="btn btn-secondary">
+                                <i data-feather="activity"></i> Test Connection
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if callinoo_services %}
+                <div class="mt-4">
+                    <h6>Available Services</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-dark">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Service</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in callinoo_services %}
+                                <tr>
+                                    <td>{{ service.id }}</td>
+                                    <td>{{ service.name }}</td>
+                                    <td>{{ service.description }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle visibility for API Token
+        const toggleToken = document.getElementById('toggleToken');
+        const tokenInput = document.getElementById('callinoo_token');
+        if (toggleToken && tokenInput) {
+            toggleToken.addEventListener('click', function() {
+                const type = tokenInput.getAttribute('type');
+                tokenInput.setAttribute('type', type === 'password' ? 'text' : 'password');
+                this.innerHTML = type === 'password' ? '<i data-feather="eye-off"></i>' : '<i data-feather="eye"></i>';
+                feather.replace();
+            });
+            // Set initial type to password
+            tokenInput.setAttribute('type', 'password');
+        }
+    });
+</script>
+{% endblock %}

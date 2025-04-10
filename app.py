@@ -42,6 +42,11 @@ login_manager.login_view = 'login'
 # Import models after db is defined to avoid circular imports
 from models import User, Order, PaymentTransaction, AdminUser
 
+# Import API clients
+import config_manager
+from nowpayments import NowPayments
+from callinoo import CallinooAPI
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(AdminUser, int(user_id))
