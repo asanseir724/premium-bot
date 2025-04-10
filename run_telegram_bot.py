@@ -410,12 +410,98 @@ def handle_callback_query(call):
         handle_support(call.message)
         
     elif call.data == "my_orders":
-        handle_my_orders(call.message)
+        # When coming from a callback, we need to extract the user ID from the callback
+        # Instead of relying on message.from_user which would be the bot 
+        user_id = str(call.from_user.id)
+        user = db_session.query(User).filter_by(telegram_id=user_id).first()
+        
+        if not user:
+            # If user is not found, create it - though this should be rare in this context
+            user = User(
+                telegram_id=user_id,
+                username=call.from_user.username,
+                first_name=call.from_user.first_name,
+                last_name=call.from_user.last_name
+            )
+            db_session.add(user)
+            db_session.commit()
+            logger.info(f"Created new user from callback: {user.username}")
+            
+        # Get user's orders from the database
+        orders = db_session.query(Order).filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
+        
+        if orders:
+            orders_text = "🛒 *Your Orders*\n\n"
+            
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            
+            for order in orders:
+                # Add emoji for order status
+                status_emoji = "⏳"  # Pending by default
+                if order.status == "APPROVED":
+                    status_emoji = "✅"  # Approved
+                elif order.status == "REJECTED":
+                    status_emoji = "❌"  # Rejected
+                elif order.status == "PAYMENT_RECEIVED":
+                    status_emoji = "💰"  # Payment received
+                elif order.status == "ADMIN_REVIEW":
+                    status_emoji = "👨‍💼"  # Admin review
+                elif order.status == "AWAITING_PAYMENT":
+                    status_emoji = "💸"  # Awaiting payment
+                
+                # Format order information
+                orders_text += f"{status_emoji} *Order #{order.order_id}*\n"
+                orders_text += f"📱 Plan: {order.plan_name}\n"
+                orders_text += f"💵 Amount: ${order.amount}\n"
+                orders_text += f"📅 Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+                orders_text += f"🔄 Status: {order.status}\n"
+                
+                # Add activation link if approved
+                if order.status == "APPROVED" and order.activation_link:
+                    orders_text += f"🔗 [Activation Link]({order.activation_link})\n"
+                
+                orders_text += "\n"
+                
+                # Add button to view order details
+                view_button = types.InlineKeyboardButton(
+                    f"View Order #{order.order_id} Details",
+                    callback_data=f"view_order:{order.order_id}"
+                )
+                markup.add(view_button)
+            
+            # Add back button
+            back_button = types.InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")
+            markup.add(back_button)
+            
+            bot.edit_message_text(
+                orders_text, 
+                call.message.chat.id,
+                call.message.message_id,
+                parse_mode="Markdown", 
+                reply_markup=markup,
+                disable_web_page_preview=False  # Allow preview for activation links
+            )
+        else:
+            # No orders found
+            markup = types.InlineKeyboardMarkup()
+            plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+            back_button = types.InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")
+            markup.add(plans_button)
+            markup.add(back_button)
+            
+            bot.edit_message_text(
+                "🛒 *Your Orders*\n\nYou don't have any orders yet. Browse our subscription plans to make a purchase!",
+                call.message.chat.id,
+                call.message.message_id,
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
         
     elif call.data.startswith("view_order:"):
         order_id = call.data.split(":")[1]
-        # Get the user
-        user = get_or_create_user(call.message)
+        # Get the user from the callback
+        user_id = str(call.from_user.id)
+        user = db_session.query(User).filter_by(telegram_id=user_id).first()
         # Get the order
         order = db_session.query(Order).filter_by(order_id=order_id, user_id=user.id).first()
         
