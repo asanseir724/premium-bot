@@ -1515,9 +1515,11 @@ def notify_customer_about_payment(order, transaction):
         markup = types.InlineKeyboardMarkup()
         view_order_button = types.InlineKeyboardButton("🔍 View Order Details", callback_data=f"view_order:{order.order_id}")
         my_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+        plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
         main_menu_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
         markup.add(view_order_button)
         markup.add(my_orders_button)
+        markup.add(plans_button)
         markup.add(main_menu_button)
         
         bot.send_message(
@@ -1557,13 +1559,19 @@ def notify_customer_about_approval(order):
             f"Thank you for your purchase! If you have any questions, contact our support."
         )
         
-        # Create notification with activation link
+        # Create notification with activation link and navigation buttons
         markup = types.InlineKeyboardMarkup()
         activate_button = types.InlineKeyboardButton("🚀 Activate Premium", url=order.activation_link)
         view_order_button = types.InlineKeyboardButton("🔍 View Order Details", callback_data=f"view_order:{order.order_id}")
+        my_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+        plans_button = types.InlineKeyboardButton("📱 Browse Plans", callback_data="show_plans")
+        main_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
         support_button = types.InlineKeyboardButton("🆘 Need Help?", callback_data="support")
         markup.add(activate_button)
         markup.add(view_order_button)
+        markup.add(my_orders_button)
+        markup.add(plans_button)
+        markup.add(main_button)
         markup.add(support_button)
         
         bot.send_message(
@@ -1639,14 +1647,18 @@ def notify_customer_about_rejection(order):
             f"If you believe this was a mistake or need further assistance, please contact our support team."
         )
         
-        # Create notification with support button and view orders
+        # Create notification with support button, navigation and view orders
         markup = types.InlineKeyboardMarkup()
         try_again_button = types.InlineKeyboardButton("🔄 Try Again", callback_data="show_plans")
         view_order_button = types.InlineKeyboardButton("🔍 View Order Details", callback_data=f"view_order:{order.order_id}")
+        my_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+        main_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
         support_button = types.InlineKeyboardButton("🆘 Contact Support", callback_data="support")
         
         markup.add(try_again_button)
         markup.add(view_order_button)
+        markup.add(my_orders_button)
+        markup.add(main_button)
         markup.add(support_button)
         
         bot.send_message(
