@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Management - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Admin Management</h2>
+        
+        <div class="row">
+            <!-- Bot Admins Management -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Telegram Bot Admins</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Bot admins can access the admin panel in Telegram bot using the /admin command.
+                        </p>
+                        
+                        {% if bot_admins %}
+                            <div class="list-group mb-3">
+                                {% for admin_id in bot_admins %}
+                                    <div class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                                        <span>{{ admin_id }}</span>
+                                        <form method="POST" action="{{ url_for('admin_remove_bot_admin', admin_id=admin_id) }}" 
+                                              onsubmit="return confirm('Are you sure you want to remove this admin?');">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i data-feather="trash-2"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">No bot admins configured yet.</div>
+                        {% endif %}
+                        
+                        <form method="POST" action="{{ url_for('admin_add_bot_admin') }}">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" name="admin_id" placeholder="Telegram ID" required>
+                                <button class="btn btn-primary" type="submit">Add Admin</button>
+                            </div>
+                            <small class="form-text text-muted">Enter the Telegram user ID (numeric) to add as admin.</small>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Web Admins Management -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Web Admin Users</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Web admin users can access this admin web interface.
+                        </p>
+                        
+                        {% if web_admins %}
+                            <div class="list-group mb-3">
+                                {% for admin in web_admins %}
+                                    <div class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span>{{ admin.username }}</span>
+                                            {% if admin.is_super_admin %}
+                                                <span class="badge bg-warning ms-2">Super Admin</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if current_user.is_super_admin and current_user.id != admin.id %}
+                                        <form method="POST" action="{{ url_for('admin_remove_web_admin', admin_id=admin.id) }}" 
+                                              onsubmit="return confirm('Are you sure you want to remove this admin?');">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i data-feather="trash-2"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">No web admins found.</div>
+                        {% endif %}
+                        
+                        {% if current_user.is_super_admin %}
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAdminModal">
+                            Add Web Admin
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Admin Modal -->
+{% if current_user.is_super_admin %}
+<div class="modal fade" id="addAdminModal" tabindex="-1" aria-labelledby="addAdminModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAdminModalLabel">Add Web Admin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('admin_add_web_admin') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_super_admin" name="is_super_admin">
+                        <label class="form-check-label" for="is_super_admin">Super Admin</label>
+                        <div class="form-text">Super admins can manage other admins and have full access.</div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Add Admin</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

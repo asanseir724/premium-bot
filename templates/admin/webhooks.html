@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Webhook Configuration - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Webhook Configuration</h2>
+        
+        <div class="row">
+            <!-- Telegram Bot Webhook -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Telegram Bot Webhook</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            This webhook URL should be set in Telegram Bot API using setWebhook method.
+                        </p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Webhook URL</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ telegram_webhook_url }}" readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ telegram_webhook_url }}">
+                                    <i data-feather="copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <p class="mb-1">How to set up Telegram webhook:</p>
+                        <ol class="text-muted small">
+                            <li>Get your bot token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a></li>
+                            <li>Open the URL: <code>https://api.telegram.org/bot&lt;YOUR_BOT_TOKEN&gt;/setWebhook?url={{ telegram_webhook_url }}</code></li>
+                            <li>Replace <code>&lt;YOUR_BOT_TOKEN&gt;</code> with your actual bot token</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Webhook -->
+            <div class="col-md-6 mb-4">
+                <div class="card dash-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Payment Webhook</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            This webhook URL should be set in NowPayments dashboard for Instant Payment Notifications (IPN).
+                        </p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Webhook URL</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ payment_webhook_url }}" readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ payment_webhook_url }}">
+                                    <i data-feather="copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <p class="mb-1">How to set up NowPayments webhook:</p>
+                        <ol class="text-muted small">
+                            <li>Log in to your <a href="https://nowpayments.io" target="_blank">NowPayments account</a></li>
+                            <li>Go to the Store Settings > Callbacks section</li>
+                            <li>Enter the URL above into the IPN callback URL field</li>
+                            <li>Save settings</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <i data-feather="info"></i> <strong>Note:</strong> Your application must be accessible from the internet with a valid HTTPS URL for webhooks to work properly.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

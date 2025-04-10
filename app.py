@@ -237,6 +237,155 @@ def payment_webhook():
     
     return jsonify({"status": "success"})
 
+# Admin routes for new admin panel sections
+@app.route('/admin/admins')
+@login_required
+def admin_admins():
+    # Get list of bot admins from config
+    bot_admins = config_manager.get_bot_admins()
+    # Get list of web admin users
+    web_admins = AdminUser.query.all()
+    
+    return render_template('admin/admins.html', bot_admins=bot_admins, web_admins=web_admins)
+
+@app.route('/admin/admins/add_bot_admin', methods=['POST'])
+@login_required
+def admin_add_bot_admin():
+    admin_id = request.form.get('admin_id')
+    if admin_id:
+        success = config_manager.add_bot_admin(admin_id)
+        if success:
+            flash(f'Bot admin {admin_id} has been added', 'success')
+        else:
+            flash(f'Bot admin {admin_id} already exists', 'warning')
+    else:
+        flash('Admin ID is required', 'danger')
+    
+    return redirect(url_for('admin_admins'))
+
+@app.route('/admin/admins/remove_bot_admin/<admin_id>', methods=['POST'])
+@login_required
+def admin_remove_bot_admin(admin_id):
+    if admin_id:
+        success = config_manager.remove_bot_admin(admin_id)
+        if success:
+            flash(f'Bot admin {admin_id} has been removed', 'success')
+        else:
+            flash(f'Bot admin {admin_id} not found', 'danger')
+    
+    return redirect(url_for('admin_admins'))
+
+@app.route('/admin/admins/add_web_admin', methods=['POST'])
+@login_required
+def admin_add_web_admin():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    is_super_admin = 'is_super_admin' in request.form
+    
+    if not username or not password:
+        flash('Username and password are required', 'danger')
+        return redirect(url_for('admin_admins'))
+    
+    existing_admin = AdminUser.query.filter_by(username=username).first()
+    if existing_admin:
+        flash(f'Admin user {username} already exists', 'warning')
+        return redirect(url_for('admin_admins'))
+    
+    new_admin = AdminUser(
+        username=username,
+        password_hash=generate_password_hash(password),
+        is_super_admin=is_super_admin
+    )
+    
+    db.session.add(new_admin)
+    db.session.commit()
+    
+    flash(f'Admin user {username} has been added', 'success')
+    return redirect(url_for('admin_admins'))
+
+@app.route('/admin/admins/remove_web_admin/<int:admin_id>', methods=['POST'])
+@login_required
+def admin_remove_web_admin(admin_id):
+    # Make sure the current user is a super admin
+    if not current_user.is_super_admin:
+        flash('Only super admins can remove admin users', 'danger')
+        return redirect(url_for('admin_admins'))
+    
+    # Don't allow deleting self
+    if current_user.id == admin_id:
+        flash('You cannot remove yourself', 'danger')
+        return redirect(url_for('admin_admins'))
+    
+    admin = AdminUser.query.get(admin_id)
+    if not admin:
+        flash('Admin user not found', 'danger')
+        return redirect(url_for('admin_admins'))
+    
+    db.session.delete(admin)
+    db.session.commit()
+    
+    flash(f'Admin user {admin.username} has been removed', 'success')
+    return redirect(url_for('admin_admins'))
+
+@app.route('/admin/channels')
+@login_required
+def admin_channels():
+    # Default values if not in config
+    admin_channel = config_manager.get_config_value('admin_channel', '@admin_channel')
+    public_channel = config_manager.get_config_value('public_channel', '@public_channel')
+    notification_enabled = config_manager.get_config_value('notification_enabled', False)
+    
+    return render_template('admin/channels.html', 
+                           admin_channel=admin_channel, 
+                           public_channel=public_channel,
+                           notification_enabled=notification_enabled)
+
+@app.route('/admin/channels/update', methods=['POST'])
+@login_required
+def admin_update_channels():
+    admin_channel = request.form.get('admin_channel')
+    public_channel = request.form.get('public_channel')
+    notification_enabled = 'notification_enabled' in request.form
+    
+    # Save to config
+    config_manager.set_config_value('admin_channel', admin_channel)
+    config_manager.set_config_value('public_channel', public_channel)
+    config_manager.set_config_value('notification_enabled', notification_enabled)
+    
+    flash('Channel settings have been updated', 'success')
+    return redirect(url_for('admin_channels'))
+
+@app.route('/admin/webhooks')
+@login_required
+def admin_webhooks():
+    # Check if webhook is set up
+    telegram_webhook_url = request.host_url.rstrip('/') + url_for('telegram_webhook')
+    payment_webhook_url = request.host_url.rstrip('/') + url_for('payment_webhook')
+    
+    return render_template('admin/webhooks.html', 
+                           telegram_webhook_url=telegram_webhook_url,
+                           payment_webhook_url=payment_webhook_url)
+
+@app.route('/admin/support')
+@login_required
+def admin_support():
+    # Get current support contact
+    support_contact = config_manager.get_support_contact()
+    return render_template('admin/support.html', support_contact=support_contact)
+
+@app.route('/admin/support/update', methods=['POST'])
+@login_required
+def admin_update_support():
+    support_contact = request.form.get('support_contact')
+    
+    if support_contact:
+        config_manager.set_support_contact(support_contact)
+        flash('Support contact has been updated', 'success')
+    else:
+        flash('Support contact is required', 'danger')
+    
+    return redirect(url_for('admin_support'))
+
 @app.route('/webhook/telestars24bot', methods=['POST'])
 def telegram_webhook():
     """Endpoint for Telegram webhook, to be used with setWebhook"""

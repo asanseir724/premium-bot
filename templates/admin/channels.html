@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Channel Settings - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Channel Settings</h2>
+        
+        <div class="card dash-card">
+            <div class="card-header">
+                <h5 class="mb-0">Telegram Channels Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Configure the Telegram channels for order notifications and public announcements.
+                </p>
+                
+                <form method="POST" action="{{ url_for('admin_update_channels') }}">
+                    <div class="mb-3">
+                        <label for="admin_channel" class="form-label">Admin Channel</label>
+                        <input type="text" class="form-control" id="admin_channel" name="admin_channel" 
+                               value="{{ admin_channel }}" placeholder="@admin_channel">
+                        <div class="form-text">
+                            Enter the username of the Telegram channel where admin notifications will be sent.
+                            The bot must be added as an admin to this channel.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="public_channel" class="form-label">Public Channel</label>
+                        <input type="text" class="form-control" id="public_channel" name="public_channel" 
+                               value="{{ public_channel }}" placeholder="@public_channel">
+                        <div class="form-text">
+                            Enter the username of the Telegram channel where successful orders will be announced publicly.
+                            The bot must be added as an admin to this channel.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="notification_enabled" name="notification_enabled" 
+                               {% if notification_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="notification_enabled">Enable Public Notifications</label>
+                        <div class="form-text">
+                            If enabled, successful orders will be announced in the public channel.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Save Channel Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

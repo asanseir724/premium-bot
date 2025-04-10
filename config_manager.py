@@ -158,5 +158,25 @@ def set_support_contact(contact):
     logger.info(f"Updated support contact: {contact}")
     return True
 
+def get_config_value(key, default=None):
+    """Get a configuration value by key with a default fallback"""
+    if _config is None:
+        _load_config()
+    
+    # Check if key exists in config, if not return default
+    if key in _config:
+        return _config[key]
+    return default
+
+def set_config_value(key, value):
+    """Set a configuration value by key"""
+    if _config is None:
+        _load_config()
+    
+    _config[key] = value
+    _save_config()
+    logger.info(f"Updated config value: {key} = {value}")
+    return True
+
 # Initialize configuration
 _load_config()

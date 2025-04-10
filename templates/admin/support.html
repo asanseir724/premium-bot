@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Support Settings - Telegram Premium Subscription Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="admin-sidebar p-3">
+            <h5 class="mb-3">Admin Panel</h5>
+            <div class="list-group mb-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="home"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="shopping-cart"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_plans') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="tag"></i> Plans
+                </a>
+                <a href="{{ url_for('admin_admins') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="users"></i> Admins
+                </a>
+                <a href="{{ url_for('admin_channels') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="radio"></i> Channels
+                </a>
+                <a href="{{ url_for('admin_webhooks') }}" class="list-group-item list-group-item-action">
+                    <i data-feather="link"></i> Webhooks
+                </a>
+                <a href="{{ url_for('admin_support') }}" class="list-group-item list-group-item-action active">
+                    <i data-feather="help-circle"></i> Support
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <!-- Main content -->
+        <h2 class="mb-4">Support Settings</h2>
+        
+        <div class="card dash-card">
+            <div class="card-header">
+                <h5 class="mb-0">Customer Support Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Configure the support contact information that will be displayed to users in the Telegram bot.
+                </p>
+                
+                <form method="POST" action="{{ url_for('admin_update_support') }}">
+                    <div class="mb-3">
+                        <label for="support_contact" class="form-label">Support Contact</label>
+                        <input type="text" class="form-control" id="support_contact" name="support_contact" 
+                               value="{{ support_contact }}" placeholder="@support_username">
+                        <div class="form-text">
+                            Enter the Telegram username or group link where users should contact for support.
+                            This will be displayed when users use the /support command in the bot.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Save Support Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card dash-card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">FAQ Management</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Manage frequently asked questions that will be displayed to users in the Telegram bot.
+                </p>
+                
+                <!-- This is a placeholder for future FAQ management functionality -->
+                <div class="alert alert-info">
+                    <i data-feather="info"></i>
+                    FAQ management functionality will be available in a future update.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}
