@@ -562,5 +562,91 @@ def telegram_webhook():
         app.logger.exception(e)
         return jsonify({"status": "error", "message": str(e)})
 
+@app.route('/webhook/nowpayments/ipn', methods=['POST'])
+def nowpayments_ipn_webhook():
+    """Endpoint for NowPayments IPN (Instant Payment Notification)"""
+    try:
+        # Verify that the request contains JSON data
+        if not request.is_json:
+            app.logger.error("Invalid payment webhook: Not JSON data")
+            return jsonify({"status": "error", "message": "Invalid content type, expected JSON"}), 400
+        
+        # Get webhook data
+        ipn_data = request.get_json()
+        app.logger.info(f"Received payment IPN: {ipn_data}")
+        
+        # Verify IPN authenticity
+        api_key = config_manager.get_config_value('nowpayments_api_key', '')
+        if not api_key:
+            app.logger.error("Cannot process IPN: NowPayments API key not set")
+            return jsonify({"status": "error", "message": "API key not configured"}), 500
+            
+        # Initialize the API client
+        from nowpayments import NowPayments
+        nowpayments_api = NowPayments(api_key=api_key)
+        
+        # Verify the IPN signature
+        is_valid = nowpayments_api.verify_ipn_callback(ipn_data)
+        if not is_valid:
+            app.logger.error("Invalid IPN signature")
+            return jsonify({"status": "error", "message": "Invalid IPN signature"}), 400
+            
+        # Process the payment update
+        payment_id = ipn_data.get('payment_id')
+        payment_status = ipn_data.get('payment_status')
+        
+        if not payment_id or not payment_status:
+            app.logger.error(f"Missing payment information in IPN: {ipn_data}")
+            return jsonify({"status": "error", "message": "Missing payment information"}), 400
+            
+        app.logger.info(f"Processing payment update: Payment ID {payment_id}, Status: {payment_status}")
+        
+        # Find the payment transaction
+        with db.session() as session:
+            transaction = session.query(PaymentTransaction).filter_by(payment_id=payment_id).first()
+            
+            if not transaction:
+                app.logger.error(f"Payment transaction not found: {payment_id}")
+                return jsonify({"status": "error", "message": "Payment transaction not found"}), 404
+                
+            # Update transaction status and data
+            transaction.status = payment_status
+            transaction.ipn_data = ipn_data
+            
+            if payment_status in ["FINISHED", "CONFIRMED"]:
+                transaction.completed_at = datetime.utcnow()
+                
+                # Update the corresponding order
+                order = session.query(Order).get(transaction.order_id)
+                if order:
+                    previous_status = order.status
+                    order.status = "PAYMENT_RECEIVED"
+                    order.updated_at = datetime.utcnow()
+                    
+                    # Save changes
+                    session.commit()
+                    
+                    app.logger.info(f"Payment confirmed for order #{order.order_id}: Status changed from {previous_status} to PAYMENT_RECEIVED")
+                    
+                    # Optionally notify admins about the payment
+                    try:
+                        from run_telegram_bot import notify_admins_about_payment
+                        notify_admins_about_payment(order, transaction)
+                    except Exception as notify_error:
+                        app.logger.error(f"Error notifying admins: {str(notify_error)}")
+                else:
+                    app.logger.error(f"Order not found for payment: {payment_id}")
+                    return jsonify({"status": "error", "message": "Order not found"}), 404
+            else:
+                # For other statuses, just update the transaction
+                session.commit()
+                app.logger.info(f"Payment status updated: {payment_id} to {payment_status}")
+            
+            return jsonify({"status": "success", "message": f"Payment updated: {payment_status}"})
+    except Exception as e:
+        app.logger.error(f"Error processing payment webhook: {str(e)}")
+        app.logger.exception(e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

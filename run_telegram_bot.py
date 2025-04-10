@@ -899,6 +899,77 @@ def notify_admins_about_order(order):
             bot.send_message(admin_id, notification, parse_mode="Markdown")
         except Exception as e:
             logger.error(f"Error sending notification to admin {admin_id}: {e}")
+            
+def notify_admins_about_payment(order, transaction):
+    """Notify all admins about a completed payment"""
+    admin_ids = config_manager.get_bot_admins()
+    
+    if not admin_ids:
+        logger.warning("No admin IDs configured for notifications")
+        return
+    
+    # Format amount with 2 decimal places
+    formatted_amount = "{:.2f}".format(transaction.amount)
+    
+    # Get crypto amount from IPN data if available
+    crypto_amount = "N/A"
+    crypto_currency = transaction.pay_currency
+    
+    if transaction.ipn_data:
+        pay_amount = transaction.ipn_data.get('pay_amount')
+        if pay_amount:
+            crypto_amount = pay_amount
+    
+    notification = (
+        f"💰 *Payment Received!*\n\n"
+        f"Order #: {order.order_id}\n"
+        f"Plan: {order.plan_name}\n"
+        f"Username: {order.telegram_username}\n"
+        f"Amount: ${formatted_amount}\n"
+        f"Crypto: {crypto_amount} {crypto_currency}\n"
+        f"Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}\n\n"
+        f"ℹ️ Payment has been verified. This order is ready for processing."
+    )
+    
+    # Create inline keyboard for quick actions
+    markup = types.InlineKeyboardMarkup()
+    approve_button = types.InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve:{order.order_id}")
+    review_button = types.InlineKeyboardButton("🔍 Review", callback_data=f"admin_review:{order.order_id}")
+    markup.row(approve_button, review_button)
+    
+    for admin_id in admin_ids:
+        try:
+            bot.send_message(
+                admin_id, 
+                notification, 
+                parse_mode="Markdown",
+                reply_markup=markup
+            )
+        except Exception as e:
+            logger.error(f"Error sending payment notification to admin {admin_id}: {e}")
+            
+    # Also notify the customer
+    try:
+        customer = db_session.query(User).get(order.user_id)
+        if customer:
+            customer_notification = (
+                f"💰 *Payment Received!*\n\n"
+                f"We've received your payment for order #{order.order_id}.\n\n"
+                f"*Order Details:*\n"
+                f"◾️ Plan: {order.plan_name}\n"
+                f"◾️ Username: {order.telegram_username}\n"
+                f"◾️ Amount: ${formatted_amount}\n\n"
+                f"Your order is now being processed. You'll receive another message "
+                f"when your Telegram Premium is activated."
+            )
+            
+            bot.send_message(
+                customer.telegram_id,
+                customer_notification,
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        logger.error(f"Error notifying customer about payment: {e}")
 
 # Polling mode for development
 def start_polling():
