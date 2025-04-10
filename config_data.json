@@ -25,5 +25,8 @@
     "bot_admins": [
         "118679725"
     ],
-    "support_contact": "@support\u0628\u0628\u0628\u0628\u0628"
+    "support_contact": "@support\u0628\u0628\u0628\u0628\u0628",
+    "bot_token": "7155173450:AAFTd4o9SdyljCwCSFi40bZpKiQSOeC2BQc",
+    "nowpayments_api_key": "",
+    "bot_enabled": true
 }

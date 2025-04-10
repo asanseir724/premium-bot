@@ -9,9 +9,52 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
+# Set up detailed logging
+import os
+from logging.handlers import RotatingFileHandler
+import traceback
+import sys
+
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+# Configure root logger
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Console handler
+        logging.StreamHandler(),
+        # File handler with rotation
+        RotatingFileHandler(
+            'logs/telegram_bot.log',
+            maxBytes=10485760,  # 10MB
+            backupCount=5
+        )
+    ]
+)
+
+# Get logger for this module
 logger = logging.getLogger(__name__)
+
+# Also log all telebot logs
+telebot_logger = logging.getLogger('telebot')
+telebot_logger.setLevel(logging.DEBUG)
+
+# Handle uncaught exceptions
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        # Don't log keyboard interrupt
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+# Install exception handler
+sys.excepthook = handle_exception
+
+logger.info("Starting Telegram bot application")
 
 # Import application components
 from config import ORDER_EXPIRATION_HOURS
@@ -752,17 +795,66 @@ def notify_admins_about_order(order):
 # Polling mode for development
 def start_polling():
     """Start the bot in polling mode"""
-    logger.info("Starting bot in polling mode...")
-    bot.remove_webhook()
-    bot.polling(none_stop=True)
-
+    logger.info("Starting bot in polling mode")
+    try:
+        # First, remove any existing webhook
+        bot.remove_webhook()
+        logger.info("Webhook removed, starting polling")
+        
+        # Log bot information
+        bot_info = bot.get_me()
+        logger.info(f"Bot started: @{bot_info.username} (ID: {bot_info.id})")
+        
+        # Start polling with better error handling
+        bot.infinity_polling(timeout=60, long_polling_timeout=60)
+    except Exception as e:
+        logger.error(f"Error starting polling: {str(e)}")
+        logger.exception(e)
+        
 # For webhook mode in production
 def set_webhook(webhook_url):
     """Set webhook for the bot"""
-    bot.remove_webhook()
-    bot.set_webhook(url=webhook_url)
-    logger.info(f"Webhook set to {webhook_url}")
+    logger.info(f"Setting webhook to: {webhook_url}")
+    try:
+        # First, remove any existing webhook
+        bot.remove_webhook()
+        logger.info("Existing webhook removed")
+        
+        # Set the new webhook
+        result = bot.set_webhook(url=webhook_url)
+        
+        if result:
+            # Get webhook info to verify
+            webhook_info = bot.get_webhook_info()
+            logger.info(f"Webhook set successfully. Info: {webhook_info}")
+            return True
+        else:
+            logger.error("Failed to set webhook")
+            return False
+    except Exception as e:
+        logger.error(f"Error setting webhook: {str(e)}")
+        logger.exception(e)
+        return False
+
+# Function to process webhook updates from Flask
+def process_webhook_update(update_json):
+    """Process webhook update from Flask"""
+    logger.info(f"Received webhook update")
+    try:
+        update = telebot.types.Update.de_json(update_json)
+        bot.process_new_updates([update])
+        return True
+    except Exception as e:
+        logger.error(f"Error processing webhook update: {str(e)}")
+        logger.exception(e)
+        return False
 
 if __name__ == "__main__":
-    # Run in polling mode for development
-    start_polling()
+    logger.info("Bot script started directly")
+    
+    # Check if bot is enabled in config
+    if config_manager.get_config_value("bot_enabled", default=False):
+        logger.info("Bot is enabled, starting in polling mode")
+        start_polling()
+    else:
+        logger.warning("Bot is disabled in configuration. Enable it from admin panel.")

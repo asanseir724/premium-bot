@@ -447,17 +447,43 @@ def admin_update_bot_settings():
 @app.route('/admin/bot_settings/start', methods=['POST'])
 @login_required
 def admin_start_bot():
-    # Logic to start the bot (this is just a placeholder)
-    # In a real application, you would need a mechanism to restart the bot process
+    # Logic to start the bot
     try:
-        # Set bot as enabled
+        # Import the required function
+        import subprocess
+        import sys
+        
+        # Set bot as enabled in config
         config_manager.set_config_value('bot_enabled', True)
+        app.logger.info("Bot enabled in config")
         
-        # This is a placeholder. In a real app, you'd need a way to communicate with the bot process
-        # For example, you might use a message queue or a direct API call
+        # Start the bot in a separate process
+        # In this implementation, we're starting it in the background
+        bot_token = config_manager.get_config_value('bot_token')
+        if not bot_token:
+            flash('Bot token is required to start the bot', 'danger')
+            return redirect(url_for('admin_bot_settings'))
         
-        flash('Bot has been started', 'success')
+        # Check if we're in a subprocess already to avoid nested subprocesses
+        is_subprocess = os.environ.get('BOT_SUBPROCESS') == '1'
+        if not is_subprocess:
+            app.logger.info("Starting bot in a separate process")
+            env = os.environ.copy()
+            env['BOT_SUBPROCESS'] = '1'
+            
+            # Run the bot script as a separate process
+            subprocess.Popen([sys.executable, 'start_bot.py'], 
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            env=env)
+            
+            flash('Bot has been started in background', 'success')
+        else:
+            app.logger.warning("Already in a subprocess, not starting another one")
+            flash('Bot process already running', 'warning')
     except Exception as e:
+        app.logger.error(f"Error starting bot: {str(e)}")
+        app.logger.exception(e)
         flash(f'Failed to start bot: {str(e)}', 'danger')
     
     return redirect(url_for('admin_bot_settings'))
@@ -465,15 +491,20 @@ def admin_start_bot():
 @app.route('/admin/bot_settings/stop', methods=['POST'])
 @login_required
 def admin_stop_bot():
-    # Logic to stop the bot (this is just a placeholder)
+    # Logic to stop the bot
     try:
-        # Set bot as disabled
+        # Set bot as disabled in config
         config_manager.set_config_value('bot_enabled', False)
+        app.logger.info("Bot disabled in config")
         
-        # This is a placeholder. In a real app, you'd need a way to communicate with the bot process
+        # In a real production environment, you would need a proper process management
+        # solution (like supervisord) to control the bot process
+        # For now, we'll just rely on the bot checking the enabled flag in config
         
-        flash('Bot has been stopped', 'success')
+        flash('Bot has been disabled. The process will terminate on its next check cycle.', 'success')
     except Exception as e:
+        app.logger.error(f"Error stopping bot: {str(e)}")
+        app.logger.exception(e)
         flash(f'Failed to stop bot: {str(e)}', 'danger')
     
     return redirect(url_for('admin_bot_settings'))
@@ -507,8 +538,29 @@ def admin_set_webhook():
 @app.route('/webhook/telestars24bot', methods=['POST'])
 def telegram_webhook():
     """Endpoint for Telegram webhook, to be used with setWebhook"""
-    # This is a placeholder and will be implemented with the telegram bot handler
-    return jsonify({"status": "success"})
+    try:
+        # Import telegram bot logic
+        from run_telegram_bot import process_webhook_update
+        
+        # Get the update data from Telegram
+        update_json = request.get_json()
+        if not update_json:
+            app.logger.error("Empty update received in webhook")
+            return jsonify({"status": "error", "message": "Empty update"})
+        
+        # Log webhook request for debugging
+        app.logger.debug(f"Received Telegram update: {update_json}")
+        
+        # Process the update
+        result = process_webhook_update(update_json)
+        if result:
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": "Failed to process update"})
+    except Exception as e:
+        app.logger.error(f"Error in webhook handler: {str(e)}")
+        app.logger.exception(e)
+        return jsonify({"status": "error", "message": str(e)})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
