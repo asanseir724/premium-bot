@@ -1393,10 +1393,20 @@ def notify_customer_about_payment(order, transaction):
             f"when your Telegram Premium is activated."
         )
         
+        # Add navigation buttons
+        markup = types.InlineKeyboardMarkup()
+        view_order_button = types.InlineKeyboardButton("🔍 View Order Details", callback_data=f"view_order:{order.order_id}")
+        my_orders_button = types.InlineKeyboardButton("🛒 My Orders", callback_data="my_orders")
+        main_menu_button = types.InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
+        markup.add(view_order_button)
+        markup.add(my_orders_button)
+        markup.add(main_menu_button)
+        
         bot.send_message(
             customer.telegram_id,
             customer_notification,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=markup
         )
     except Exception as e:
         logger.error(f"Error notifying customer about payment: {e}")
