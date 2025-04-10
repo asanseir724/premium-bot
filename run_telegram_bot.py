@@ -703,8 +703,22 @@ def handle_callback_query(call):
                 reply_markup=markup
             )
             
-            # Register the next step handler
-            bot.register_next_step_handler(sent_msg, process_username_step, plan_id=plan_id)
+            # Clear any existing handlers for this chat to prevent issues
+            bot.clear_step_handler_by_chat_id(call.message.chat.id)
+            
+            # Register the next step handler with improved error handling
+            try:
+                logger.info(f"Registering next step handler for plan {plan_id}")
+                bot.register_next_step_handler(sent_msg, process_username_step, plan_id=plan_id)
+                # Send a debug message
+                logger.debug(f"Handler registered successfully for message ID {sent_msg.message_id}")
+            except Exception as e:
+                logger.error(f"Error registering handler: {e}")
+                # Fallback mechanism in case of registration error
+                bot.send_message(
+                    call.message.chat.id,
+                    "There was an issue with your request. Please try selecting the plan again."
+                )
     
     # Admin callbacks
     elif call.data == "admin_orders":
@@ -1097,17 +1111,23 @@ def handle_callback_query(call):
 
 # Message handlers for multi-step processes
 def process_username_step(message, plan_id):
+    logger.info(f"Processing username step with plan_id: {plan_id}")
     user = get_or_create_user(message)
     plan = config_manager.get_plan_by_id(plan_id)
     
     if not plan:
+        logger.error(f"Plan not found with ID: {plan_id}")
         bot.send_message(message.chat.id, "❌ Error: Plan not found. Please try again.")
         return
     
+    logger.info(f"Plan found: {plan['name']}")
+    
     username = message.text.strip()
+    logger.info(f"Received username: {username}")
     
     # Simple validation
     if not username.startswith('@'):
+        logger.warning(f"Invalid username format: {username}")
         bot.send_message(
             message.chat.id,
             "❌ Invalid username format. Username must start with @. Please try again."
