@@ -46,6 +46,7 @@ from models import User, Order, PaymentTransaction, AdminUser
 import config_manager
 from nowpayments import NowPayments
 from callinoo import CallinooAPI
+from telegram_premium_service import TelegramPremiumService
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -188,19 +189,97 @@ def admin_order_detail(order_id):
 def admin_approve_order(order_id):
     order = Order.query.filter_by(order_id=order_id).first_or_404()
     
-    # Update order status
-    order.status = 'APPROVED'
-    order.updated_at = datetime.utcnow()
-    order.admin_notes = request.form.get('admin_notes', '')
+    # Check if we should use Callinoo API for Telegram Premium
+    use_callinoo = TelegramPremiumService.is_callinoo_enabled()
     
-    # Set activation link if provided
+    # Check if manual activation link is provided
     activation_link = request.form.get('activation_link', '')
-    if activation_link:
-        order.activation_link = activation_link
+    admin_notes = request.form.get('admin_notes', '')
     
+    # If Callinoo is enabled and no manual activation link is provided, use Callinoo API
+    if use_callinoo and not activation_link:
+        try:
+            logger.info(f"Using Callinoo API to create Telegram Premium for {order.telegram_username}")
+            
+            # Create the subscription via Callinoo API
+            # We assume monthly subscription for now, can be made configurable later
+            result = TelegramPremiumService.create_premium_subscription(
+                telegram_username=order.telegram_username,
+                period='monthly'  # This could be based on the plan or configurable
+            )
+            
+            if result['success']:
+                # Successfully created subscription
+                order.activation_link = result.get('activation_link', '')
+                callinoo_order_id = result.get('order_id', '')
+                
+                # Update status and notes
+                order.status = 'APPROVED'
+                order.updated_at = datetime.utcnow()
+                
+                # Add API response details to admin notes
+                new_note = f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] " + \
+                           f"Telegram Premium subscription created via Callinoo API. " + \
+                           f"Callinoo Order ID: {callinoo_order_id}"
+                
+                if admin_notes:
+                    order.admin_notes = admin_notes + "\n\n" + new_note
+                else:
+                    order.admin_notes = new_note
+                
+                # Add success message
+                flash(f'Order {order_id} has been approved and subscription created via Callinoo API', 'success')
+            else:
+                # API call failed
+                error_msg = result.get('message', 'Unknown error')
+                logger.error(f"Callinoo API error: {error_msg}")
+                
+                # Add error details to admin notes
+                new_note = f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] " + \
+                           f"Failed to create Telegram Premium via Callinoo API: {error_msg}"
+                
+                if admin_notes:
+                    order.admin_notes = admin_notes + "\n\n" + new_note
+                else:
+                    order.admin_notes = new_note
+                
+                # Keep original status if API fails
+                order.updated_at = datetime.utcnow()
+                
+                # Add error message
+                flash(f'Failed to create subscription via Callinoo API: {error_msg}', 'danger')
+                
+        except Exception as e:
+            logger.exception(f"Error using Callinoo API: {str(e)}")
+            
+            # Add error details to admin notes
+            new_note = f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] " + \
+                       f"Error using Callinoo API: {str(e)}"
+            
+            if admin_notes:
+                order.admin_notes = admin_notes + "\n\n" + new_note
+            else:
+                order.admin_notes = new_note
+            
+            # Keep original status if exception occurs
+            order.updated_at = datetime.utcnow()
+            
+            # Add error message
+            flash(f'Error using Callinoo API: {str(e)}', 'danger')
+    else:
+        # Standard approval process (manual or Callinoo disabled)
+        order.status = 'APPROVED'
+        order.updated_at = datetime.utcnow()
+        order.admin_notes = admin_notes
+        
+        # Set manual activation link if provided
+        if activation_link:
+            order.activation_link = activation_link
+            
+        flash(f'Order {order_id} has been approved', 'success')
+    
+    # Save all changes
     db.session.commit()
-    
-    flash(f'Order {order_id} has been approved', 'success')
     
     # Trigger notification to user via Telegram bot (will be implemented in run_telegram_bot.py)
     # This is a placeholder and will be connected to the actual bot
@@ -530,6 +609,120 @@ def admin_confirm_supplier_complete(order_id):
         logger.exception(e)
         flash(f'Error confirming completion: {str(e)}', 'danger')
         return redirect(url_for('admin_order_detail', order_id=order_id))
+
+@app.route('/admin/callinoo')
+@login_required
+def admin_callinoo():
+    """Admin page for managing Callinoo API settings"""
+    # Get current Callinoo API settings
+    callinoo_token = config_manager.get_config_value('callinoo_token', '')
+    use_callinoo_for_premium = config_manager.get_config_value('use_callinoo_for_premium', False)
+    
+    # Initialize callinoo client if token exists
+    callinoo_balance = None
+    callinoo_services = None
+    if callinoo_token:
+        try:
+            callinoo_client = CallinooAPI(token=callinoo_token)
+            callinoo_balance = callinoo_client.get_balance()
+            if callinoo_balance and 'error' not in callinoo_balance:
+                session['callinoo_balance'] = callinoo_balance
+            else:
+                callinoo_balance = session.get('callinoo_balance')
+                
+            # Get services list if available
+            try:
+                callinoo_services = callinoo_client.get_services()
+                if callinoo_services and 'error' not in callinoo_services:
+                    session['callinoo_services'] = callinoo_services
+                else:
+                    callinoo_services = session.get('callinoo_services')
+            except:
+                callinoo_services = session.get('callinoo_services')
+        except Exception as e:
+            logger.error(f"Error initializing Callinoo client: {e}")
+            flash(f"Could not connect to Callinoo API: {str(e)}", "danger")
+    
+    return render_template('admin/callinoo.html', 
+                           callinoo_token=callinoo_token, 
+                           use_callinoo_for_premium=use_callinoo_for_premium,
+                           callinoo_balance=callinoo_balance,
+                           callinoo_services=callinoo_services)
+
+@app.route('/admin/callinoo/update', methods=['POST'])
+@login_required
+def admin_update_callinoo():
+    """Update Callinoo API settings"""
+    callinoo_token = request.form.get('callinoo_token')
+    use_callinoo_for_premium = 'use_callinoo_for_premium' in request.form
+    
+    # Save settings to config
+    config_manager.set_config_value('callinoo_token', callinoo_token)
+    config_manager.set_config_value('use_callinoo_for_premium', use_callinoo_for_premium)
+    
+    # Try to initialize the client to verify token
+    if callinoo_token:
+        try:
+            callinoo_client = CallinooAPI(token=callinoo_token)
+            balance = callinoo_client.get_balance()
+            if 'error' not in balance:
+                flash("Callinoo API settings updated successfully and connection verified!", "success")
+            else:
+                flash(f"Callinoo API settings updated but connection failed: {balance.get('error', 'Unknown error')}", "warning")
+        except Exception as e:
+            flash(f"Callinoo API settings updated but connection failed: {str(e)}", "warning")
+    else:
+        flash("Callinoo API settings updated. Token is empty, integration is disabled.", "info")
+    
+    return redirect(url_for('admin_callinoo'))
+
+@app.route('/admin/callinoo/check_balance', methods=['POST'])
+@login_required
+def admin_check_callinoo_balance():
+    """Check current balance on Callinoo API"""
+    callinoo_token = config_manager.get_config_value('callinoo_token', '')
+    
+    if not callinoo_token:
+        flash("No Callinoo API token configured", "danger")
+        return redirect(url_for('admin_callinoo'))
+    
+    try:
+        callinoo_client = CallinooAPI(token=callinoo_token)
+        balance = callinoo_client.get_balance()
+        
+        if 'error' not in balance:
+            session['callinoo_balance'] = balance
+            flash(f"Current balance: {balance.get('balance')} {balance.get('currency')}", "success")
+        else:
+            flash(f"Failed to check balance: {balance.get('error', 'Unknown error')}", "danger")
+    except Exception as e:
+        flash(f"Error checking Callinoo balance: {str(e)}", "danger")
+    
+    return redirect(url_for('admin_callinoo'))
+
+@app.route('/admin/callinoo/test_connection', methods=['POST'])
+@login_required
+def admin_test_callinoo_connection():
+    """Test connection to Callinoo API"""
+    callinoo_token = config_manager.get_config_value('callinoo_token', '')
+    
+    if not callinoo_token:
+        flash("No Callinoo API token configured", "danger")
+        return redirect(url_for('admin_callinoo'))
+    
+    try:
+        callinoo_client = CallinooAPI(token=callinoo_token)
+        services = callinoo_client.get_services()
+        
+        if 'error' not in services:
+            session['callinoo_services'] = services
+            flash(f"Successfully connected to Callinoo API. Found {len(services)} services.", "success")
+        else:
+            flash(f"Connection failed: {services.get('error', 'Unknown error')}", "danger")
+    except Exception as e:
+        flash(f"Error connecting to Callinoo API: {str(e)}", "danger")
+    
+    return redirect(url_for('admin_callinoo'))
 
 @app.route('/admin/bot_settings')
 @login_required

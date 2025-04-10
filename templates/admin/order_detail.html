@@ -217,12 +217,28 @@
                         <div class="d-flex flex-column gap-2 mt-4">
                             {% if order.status == 'ADMIN_REVIEW' or order.status == 'PAYMENT_RECEIVED' %}
                                 <form id="approveOrderForm" method="POST" action="{{ url_for('admin_approve_order', order_id=order.order_id) }}">
-                                    <div class="mb-3">
-                                        <label for="activationLink" class="form-label">Activation Link</label>
-                                        <input type="text" class="form-control" id="activationLink" name="activation_link" 
-                                               placeholder="https://t.me/premium/..." required>
-                                        <div class="form-text">Enter the Telegram Premium activation link</div>
+                                    <input type="hidden" name="admin_notes" id="approveFormNotes">
+                                    
+                                    <div class="alert alert-info mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="useCallinoo" checked>
+                                            <label class="form-check-label" for="useCallinoo">
+                                                Use Callinoo API to automatically process Telegram Premium
+                                            </label>
+                                            <div class="form-text">
+                                                When checked, the system will use Callinoo API to automatically create
+                                                a Telegram Premium subscription for the user.
+                                            </div>
+                                        </div>
                                     </div>
+                                    
+                                    <div id="manualActivationContainer" class="mb-3" style="display:none;">
+                                        <label for="activationLink" class="form-label">Activation Link (Manual)</label>
+                                        <input type="text" class="form-control" id="activationLink" name="activation_link" 
+                                               placeholder="https://t.me/premium/...">
+                                        <div class="form-text">Enter the Telegram Premium activation link manually</div>
+                                    </div>
+                                    
                                     <button type="submit" class="btn btn-success w-100 mb-2">
                                         <i data-feather="check"></i> Approve Order
                                     </button>
