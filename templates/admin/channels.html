@@ -46,7 +46,7 @@
                     Configure the Telegram channels for order notifications and public announcements.
                 </p>
                 
-                <form method="POST" action="/admin/channels/update">
+                <form method="POST" action="{{ url_for('admin_update_channels') }}">
                     <div class="mb-3">
                         <label for="admin_channel" class="form-label">Admin Channel</label>
                         <input type="text" class="form-control" id="admin_channel" name="admin_channel" 
