@@ -102,6 +102,92 @@
             </div>
         </div>
         
+        <!-- Premium API section -->
+        <div class="card dash-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Premium API Integration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Use this API to create and manage premium subscriptions programmatically.
+                </p>
+                
+                <div class="mb-3">
+                    <h6>Your API Key</h6>
+                    {% if api_key %}
+                    <div class="input-group">
+                        <input type="text" class="form-control" value="{{ api_key }}" readonly>
+                        <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ api_key }}">
+                            <i data-feather="copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-muted small mt-2">Keep this key secure. Anyone with this key can access the API on your behalf.</p>
+                    {% else %}
+                    <p class="text-warning">No API key generated yet. Generate one to start using the API.</p>
+                    {% endif %}
+                </div>
+                
+                <form method="POST" action="{{ url_for('admin_generate_api_key') }}" class="mb-4">
+                    <button type="submit" class="btn btn-primary">
+                        {% if api_key %}
+                        <i data-feather="refresh-cw"></i> Generate New API Key
+                        {% else %}
+                        <i data-feather="key"></i> Generate API Key
+                        {% endif %}
+                    </button>
+                    {% if api_key %}
+                    <small class="text-danger ms-2">Warning: This will invalidate your current API key</small>
+                    {% endif %}
+                </form>
+                
+                <div class="mt-4">
+                    <h6>API Endpoint</h6>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" value="{{ premium_api_url }}" readonly>
+                        <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ premium_api_url }}">
+                            <i data-feather="copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>API Documentation</h6>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Create Premium Order</h6>
+                            <p><code>POST {{ premium_api_url }}</code></p>
+                            
+                            <h6>Headers:</h6>
+                            <pre><code>Content-Type: application/json
+X-API-Key: YOUR_API_KEY</code></pre>
+                            
+                            <h6>Request Body:</h6>
+<pre><code>{
+  "telegram_username": "@username",
+  "plan_id": "plan_3month",
+  "crypto_currency": "TRX"  // Optional, defaults to TRX
+}</code></pre>
+
+                            <h6>Response:</h6>
+<pre><code>{
+  "success": true,
+  "order_id": "12345",
+  "plan_name": "3-Month Premium",
+  "amount": 13.99,
+  "currency": "USD",
+  "crypto_amount": 58.94,
+  "crypto_currency": "TRX",
+  "payment_address": "TRX_ADDRESS",
+  "payment_id": "NP_PAYMENT_ID",
+  "status": "AWAITING_PAYMENT",
+  "created_at": "2025-04-10T17:30:00.000Z"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="alert alert-info">
             <i data-feather="info"></i> <strong>Note:</strong> Your application must be accessible from the internet with a valid HTTPS URL for webhooks to work properly.
         </div>

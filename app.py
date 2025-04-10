@@ -49,6 +49,7 @@ def load_user(user_id):
 # Create the database tables
 with app.app_context():
     db.create_all()
+    
     # Create a default admin user if none exists
     if not AdminUser.query.filter_by(username="admin").first():
         admin = AdminUser(
@@ -59,6 +60,10 @@ with app.app_context():
         db.session.add(admin)
         db.session.commit()
         logger.info("Default admin user created")
+
+# Register API Blueprint
+from api import api_bp
+app.register_blueprint(api_bp)
 
 # Import routes after db is defined
 from nowpayments import NowPayments
@@ -392,9 +397,33 @@ def admin_webhooks():
     telegram_webhook_url = request.host_url.rstrip('/') + url_for('telegram_webhook')
     payment_webhook_url = request.host_url.rstrip('/') + url_for('payment_webhook')
     
+    # Get admin API key if exists
+    api_key = current_user.api_key_hash
+    
+    # Generate Premium API URL for documentation
+    premium_api_url = request.host_url.rstrip('/') + url_for('api.create_premium_order')
+    
     return render_template('admin/webhooks.html', 
                            telegram_webhook_url=telegram_webhook_url,
-                           payment_webhook_url=payment_webhook_url)
+                           payment_webhook_url=payment_webhook_url,
+                           api_key=api_key,
+                           premium_api_url=premium_api_url)
+
+@app.route('/admin/webhooks/generate_api_key', methods=['POST'])
+@login_required
+def admin_generate_api_key():
+    """Generate a new API key for the current admin user"""
+    import uuid
+    
+    # Generate a new API key
+    api_key = str(uuid.uuid4())
+    
+    # Update the current user's API key
+    current_user.api_key_hash = api_key
+    db.session.commit()
+    
+    flash('New API key has been generated. Keep it secure!', 'success')
+    return redirect(url_for('admin_webhooks'))
 
 @app.route('/admin/support')
 @login_required
