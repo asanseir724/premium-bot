@@ -65,6 +65,12 @@ with app.app_context():
 from api import api_bp
 app.register_blueprint(api_bp)
 
+# API Documentation Route
+@app.route('/api/docs')
+def api_docs():
+    """Public API documentation page"""
+    return render_template('api_docs.html')
+
 # Import routes after db is defined
 from nowpayments import NowPayments
 import config_manager
